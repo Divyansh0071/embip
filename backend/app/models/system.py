@@ -13,24 +13,6 @@ from app.core.database import Base
 from app.models.base import TimestampMixin, generate_uuid_str
 
 
-class Document(Base, TimestampMixin):
-    __tablename__ = "documents"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=generate_uuid_str
-    )
-    workspace_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
-    )
-    storage_path: Mapped[str] = mapped_column(Text, nullable=False)
-    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    file_size: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(50), default="uploaded", nullable=False
-    )
-
-
 class Query(Base, TimestampMixin):
     __tablename__ = "queries"
 

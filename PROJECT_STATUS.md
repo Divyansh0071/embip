@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Project Name:** EMBIP — Enterprise Multi-Agent Business Intelligence Platform<b**Current Phase:** Phase 6 — Centralized LLM Service & AI Foundation (COMPLETED)<br/>
+**Current Phase:** Phase 7 — Document Ingestion & Processing Pipeline (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 6 Complete & Verified | Ready for Phase 7 Approval<br/>
+**Overall Status:** Phase 7 Complete & Verified | Ready for Phase 8 Approval<br/>
 
 ---
 
@@ -15,15 +15,19 @@
 * **Phase 4 (Landing Page, Pricing & Layout Shell):** COMPLETED & VERIFIED.
 * **Phase 5 (Demo Enterprise Data Generation - NovaMart):** COMPLETED & VERIFIED.
 * **Phase 6 (Centralized LLM Service & AI Foundation):** COMPLETED & VERIFIED.
-  * Reusable, provider-agnostic `LLMProvider` abstract base class exposing typed `generate()` interface.
-  * Concrete `OpenAIProvider` implementation isolating official `openai>=1.14.0` SDK strictly within `backend/app/ai/llm/providers/`.
-  * Strongly typed Pydantic models: `LLMMessage`, `ResponseFormat`, `LLMRequest`, `UsageMetadata`, and `LLMResponse`.
-  * Centralized `LLMService` handling provider registration, default model fallbacks, exponential backoff retries for transient errors, sanitized structured logging, and structured output support.
-  * Normalized exception hierarchy (`LLMConfigurationError`, `LLMAuthenticationError`, `LLMTimeoutError`, `LLMRateLimitError`, `LLMInvalidRequestError`, `LLMProviderError`) with zero-credential regex redactor (`_sanitize_message`).
-  * Non-credit-consuming diagnostic endpoint `GET /api/v1/llm/status` registered under FastAPI `api_router`.
-  * Comprehensive unit test suite (`backend/tests/test_llm.py`) passing 22/22 tests with 100% deterministic mocks and zero paid credits used.
-  * Quality validation suite: backend pytest (22/22 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static pages), `git diff --check` (0 issues).
-  * **Individual AI Agents (Planner, SQL, RAG, Analytics, Visualization, Validation, Report Generator) have NOT been started yet and are reserved for later phases.**
+* **Phase 7 (Document Ingestion & Processing Pipeline):** COMPLETED & VERIFIED.
+  * SQL DDL migration `004_documents_schema.sql` created adding `documents` and `document_chunks` tables with tenant foreign keys (`org_id`, `workspace_id`), status constraints (`UPLOADED`, `PROCESSING`, `PROCESSED`, `FAILED`), and indexes.
+  * SQLAlchemy ORM models (`Document`, `DocumentChunk`) and repositories (`DocumentRepository`, `DocumentChunkRepository`).
+  * Generic `DocumentStorage` abstraction with `LocalDocumentStorage` (path-traversal protected) and `SupabaseDocumentStorage` adapter hook.
+  * Secure `DocumentValidator` enforcing 25MB size limits, format checks, magic byte headers (`%PDF-`, `PK\x03\x04`), and filename sanitization.
+  * Format-specific extractors for PDF (`pypdf`), DOCX (`python-docx`), TXT, CSV, and XLSX (`openpyxl`), preserving metadata (pages, sheets, rows).
+  * `TextCleaner` for whitespace normalization, Unicode NFC, and control character removal.
+  * `TextChunker` for deterministic sliding window chunking with overlap and metadata retention.
+  * `DocumentProcessingService` orchestrator and FastAPI endpoints (`POST /documents/upload`, `GET /documents`, `GET /documents/{id}`, `DELETE /documents/{id}`).
+  * Frontend `/documents` page featuring `UploadZone`, file badges, status polling, `DocumentList`, and delete actions.
+  * Automated test suite (`backend/tests/test_documents.py`) passing 39/39 backend tests.
+  * Quality validation suite: backend pytest (39/39 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static pages), `git diff --check` (0 issues).
+  * **Vector Embeddings and Qdrant Indexing have NOT been implemented yet and belong to Phase 8.**
 
 ---
 
@@ -38,7 +42,7 @@
 | **Phase 4** | **Landing Page, Pricing & Layout Shell** | **COMPLETED** | Public landing page, pricing, auth navbar, footer, AppShell, sidebar, dashboard shell |
 | **Phase 5** | **Demo Enterprise Data Generation** | **COMPLETED** | NovaMart 3-yr dataset, 100k sales tx, 20k customers, validators, DB seeder, ground-truth eval |
 | **Phase 6** | **Centralized LLM Service & AI Foundation** | **COMPLETED** | LLMProvider, OpenAIProvider, LLMService, Pydantic models, retries, diagnostic endpoint |
-| **Phase 7** | Document Ingestion Pipeline | *PENDING* | PDF/DOCX/TXT/CSV/XLSX parsing, Supabase Storage integration |tion |
+| **Phase 7** | **Document Ingestion Pipeline** | **COMPLETED** | DDL migrations, PDF/DOCX/TXT/CSV/XLSX extractors, cleaner, chunker, storage, FastAPI endpoints |
 | **Phase 8** | Vector Storage & RAG Engine | *PENDING* | Qdrant Cloud collection indexing, semantic search, payload filters |
 | **Phase 9** | SQL Agent & AST Security Validator | *PENDING* | `sqlglot` AST validator, read-only SQL generator, timeout wrapper |
 | **Phase 10** | Planner & LangGraph Orchestration | *PENDING* | LangGraph `StateGraph`, 7-agent graph state routing |

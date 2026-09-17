@@ -11,7 +11,8 @@ from app.models.business import (
     Store,
     Warehouse,
 )
-from app.models.system import AuditLog, Document, Query, QueryExecution, Report
+from app.models.documents import Document, DocumentChunk
+from app.models.system import AuditLog, Query, QueryExecution, Report
 from app.models.tenancy import Organization, User, Workspace, WorkspaceMember
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "SalesItem",
     "OperatingExpense",
     "Document",
+    "DocumentChunk",
     "Query",
     "QueryExecution",
     "Report",

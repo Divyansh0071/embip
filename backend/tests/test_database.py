@@ -15,6 +15,7 @@ from app.models import (
     SalesItem,
     SalesTransaction,
     Store,
+    User,
     Workspace,
     WorkspaceMember,
 )
@@ -208,12 +209,19 @@ async def test_system_metadata_and_reports(test_session):
     test_session.add(ws)
     await test_session.flush()
 
+    user = User(email="meta_user@example.com", full_name="Meta User")
+    test_session.add(user)
+    await test_session.flush()
+
     # Create Document
     doc = Document(
         workspace_id=ws.id,
+        uploaded_by=user.id,
         storage_path="docs/q2_report.pdf",
         file_name="Q2_Financial_Report.pdf",
+        original_filename="Q2_Financial_Report.pdf",
         file_type="pdf",
+        mime_type="application/pdf",
         file_size=1048576,
         status="processed",
     )
@@ -242,7 +250,7 @@ async def test_system_metadata_and_reports(test_session):
     doc_repo = BaseRepository(Document, test_session)
     fetched_doc = await doc_repo.get_by_id(doc.id)
     assert fetched_doc is not None
-    assert fetched_doc.file_name == "Q2_Financial_Report.pdf"
+    assert fetched_doc.filename == "Q2_Financial_Report.pdf"
 
     report_repo = BaseRepository(Report, test_session)
     fetched_report = await report_repo.get_by_id(report.id)
