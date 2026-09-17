@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./embip.db"
+    DATABASE_READONLY_URL: str = "sqlite+aiosqlite:///./embip.db"
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
@@ -14,10 +18,24 @@ class Settings(BaseSettings):
     ]
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env.local", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    def get_async_database_url(self) -> str:
+        """Returns normalized async database URL."""
+        url = self.DATABASE_URL
+        if "[YOUR-PASSWORD]" in url or "your-project" in url:
+            # Fallback to local SQLite for testing/development if credentials are template placeholders
+            return "sqlite+aiosqlite:///./embip.db"
+
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+
+        return url
 
 
 settings = Settings()

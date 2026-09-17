@@ -1,22 +1,22 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
 **Project Name:** EMBIP — Enterprise Multi-Agent Business Intelligence Platform  
-**Current Phase:** Phase 1 — Project Foundation (COMPLETED)  
+**Current Phase:** Phase 2 — Supabase Database Foundation (COMPLETED)  
 **Last Updated:** September 2026  
-**Overall Status:** Phase 1 Complete & Verified | Ready for Phase 2 Approval  
+**Overall Status:** Phase 2 Complete & Verified | Ready for Phase 3 Approval  
 
 ---
 
 ## 1. Executive Status Summary
 
 * **Phase 0 (Architecture & System Design):** COMPLETED.
-* **Phase 1 (Project Foundation & Monorepo Structure):** COMPLETED & VERIFIED.
-  * Next.js App Router application built and verified (`frontend/`).
-  * FastAPI application configured with real `GET /health` endpoint (`backend/`).
-  * Modular packages created for `ai/`, `database/`, `data/`, `documents/`, `evaluation/`, and `infrastructure/`.
-  * Environment variable template (`.env.example`), `.gitignore`, and `README.md` established.
-
-No mock data, fake UIs, unauthorized database connections, or unapproved features were added during Phase 1.
+* **Phase 1 (Project Foundation & Monorepo Structure):** COMPLETED.
+* **Phase 2 (Supabase Database Foundation):** COMPLETED & VERIFIED.
+  * SQL migration DDL scripts established in `database/migrations/` (`001_initial_schema.sql`, `002_enable_rls.sql`).
+  * Async SQLAlchemy database engine & session factory configured in `backend/app/core/database.py`.
+  * Modular Async ORM models implemented in `backend/app/models/` (`tenancy.py`, `business.py`, `system.py`).
+  * Generic Async `BaseRepository` pattern established in `backend/app/repositories/base.py`.
+  * Comprehensive database schema and unit test suite verified via Pytest (`tests/test_database.py` passing 4/4 DB tests).
 
 ---
 
@@ -26,8 +26,8 @@ No mock data, fake UIs, unauthorized database connections, or unapproved feature
 | :---: | :--- | :---: | :--- |
 | **Phase 0** | **Architecture & System Design** | **COMPLETED** | `ARCHITECTURE.md`, `PROJECT_STATUS.md` |
 | **Phase 1** | **Project Foundation & Repo Structure** | **COMPLETED** | Monorepo layout, Next.js init, FastAPI init, lint/type/build pass |
-| **Phase 2** | Supabase Database Foundation | *UPCOMING* | Supabase schema migrations, Async SQLAlchemy models, RLS policies |
-| **Phase 3** | Demo Data Generation (NovaMart) | *PENDING* | Seed scripts for 10 stores, 5 warehouses, 50 products, 100k sales |
+| **Phase 2** | **Supabase Database Foundation** | **COMPLETED** | DDL migrations, Async SQLAlchemy models, RLS policies, Pytest suite |
+| **Phase 3** | Demo Data Generation (NovaMart) | *UPCOMING* | Seed generators for 10 stores, 5 warehouses, 50 products, 100k sales |
 | **Phase 4** | Authentication & RBAC | *PENDING* | Supabase Auth integration, JWT verification, workspace RBAC |
 | **Phase 5** | Frontend Shell & Layout | *PENDING* | App router, navigation, sidebar, dark mode, workspace switcher |
 | **Phase 6** | Dashboard & Metrics View | *PENDING* | Overview metric cards, summary charts, workspace status |
@@ -48,47 +48,35 @@ No mock data, fake UIs, unauthorized database connections, or unapproved feature
 
 ---
 
-## 3. Completed Work Summary (Phase 1)
+## 3. Completed Work Summary (Phase 2)
 
-### Files & Modules Created:
-* **Root Configuration:**
-  * `.gitignore` — Ignores `node_modules/`, `.next/`, `.venv/`, `.env*`, build outputs, and upload temp folders.
-  * `.env.example` — Categorized environment variable template separating frontend public variables from backend secrets.
-  * `README.md` — Project overview, architecture summary, tech stack, and dev instructions.
-  * `PROJECT_STATUS.md` — Phase 1 completion log and tracking matrix.
-* **Frontend (`frontend/`):**
-  * Next.js 14 (App Router, TypeScript, Tailwind CSS, shadcn/ui foundation).
-  * `frontend/app/page.tsx` — Foundation start page displaying system status.
-  * `frontend/app/api/health/route.ts` — Frontend health route (`GET /api/health`).
-  * `frontend/lib/utils.ts` — Tailwind classname merger utility.
-  * `frontend/types/index.ts` — Core TypeScript interfaces.
-* **Backend (`backend/`):**
-  * FastAPI Python application with Uvicorn server configuration.
-  * `backend/app/main.py` — FastAPI app exposing `GET /health` (`{"status": "ok"}`) and root metadata.
-  * `backend/app/core/config.py` — Pydantic `BaseSettings` for env management.
-  * Package structure for `api/`, `models/`, `schemas/`, `services/`, `repositories/`.
-  * `backend/tests/test_health.py` — Pytest suite testing health and root endpoints.
-* **Modular Packages:**
-  * `ai/` — Structural packages (`agents/`, `orchestration/`, `llm/`, `rag/`, `analytics/`, `validation/`, `tools/`, `prompts/`, `tests/`).
-  * `database/` — Structural layout (`migrations/`, `seeds/`, `scripts/`, `README.md`).
-  * `data/` — Synthetic data generator layout (`generators/`, `raw/`, `processed/`, `README.md`).
-  * `documents/` — Document ingestion storage layout (`sample/`, `uploads/`, `processed/`, `README.md`).
-  * `evaluation/` — Benchmark layout (`datasets/`, `tests/`, `reports/`, `README.md`).
-  * `infrastructure/` — Deployment layout (`docker/`, `deployment/`, `cicd/`, `README.md`).
+### Files Created & Modified:
+* **Database Migrations (`database/migrations/`):**
+  * `001_initial_schema.sql` — Complete DDL migration creating all 15 core relational tables (`organizations`, `workspaces`, `users`, `workspace_members`, `stores`, `warehouses`, `categories`, `products`, `inventory`, `employees`, `customers`, `sales_transactions`, `sales_items`, `operating_expenses`, `documents`, `queries`, `query_executions`, `reports`, `audit_logs`).
+  * `002_enable_rls.sql` — Enables Row Level Security (RLS) policies on all tables enforcing workspace isolation using `app.current_workspace_id`.
+* **Backend Database Infrastructure (`backend/app/`):**
+  * `backend/app/core/database.py` — Async SQLAlchemy engine, `async_sessionmaker` factory, `Base` class, and `get_db()` dependency.
+  * `backend/app/core/config.py` — Updated database configuration with URL normalization.
+  * `backend/app/models/base.py` — UUID generator and `TimestampMixin`.
+  * `backend/app/models/tenancy.py` — Multi-tenancy ORM models (`Organization`, `Workspace`, `User`, `WorkspaceMember`).
+  * `backend/app/models/business.py` — NovaMart Retail domain ORM models (`Store`, `Warehouse`, `Category`, `Product`, `Inventory`, `Employee`, `Customer`, `SalesTransaction`, `SalesItem`, `OperatingExpense`).
+  * `backend/app/models/system.py` — System metadata ORM models (`Document`, `Query`, `QueryExecution`, `Report`, `AuditLog`).
+  * `backend/app/models/__init__.py` — Unified export module for all ORM models.
+  * `backend/app/repositories/base.py` — Generic Async `BaseRepository` implementing CRUD primitives (`get_by_id`, `list_all`, `create`, `delete`).
+* **Backend Test Suite (`backend/tests/`):**
+  * `backend/tests/test_database.py` — Comprehensive Pytest suite testing table creation, multi-tenancy model cascades, NovaMart domain records, and metadata models.
 
 ---
 
 ## 4. Verification & Testing Performed
 
-1. **Frontend Type-Check & Lint:**
-   * Command: `npm run type-check` -> PASSED (0 TypeScript errors).
-   * Command: `npm run lint` -> PASSED (0 ESLint warnings/errors).
-2. **Frontend Production Build:**
-   * Command: `npm run build` -> PASSED (Next.js 14 compiled optimized production pages `4/4`).
-3. **Backend Unit Tests:**
-   * Command: `.venv\Scripts\pytest.exe` -> PASSED (2 passed in 1.08s).
-4. **Backend Health Check Verification:**
-   * Endpoint `GET /health` returned `{"status": "ok"}` with HTTP status code `200`.
+1. **Backend Database Unit Tests:**
+   * Command: `.venv\Scripts\pytest.exe` -> PASSED (6/6 passed in 1.00s).
+   * Verified: Table creation, multi-tenancy hierarchy, NovaMart domain entity relationships, system metadata, health check endpoints.
+2. **Frontend Type-Check & Lint:**
+   * Command: `npm run type-check; npm run lint` -> PASSED (0 errors).
+3. **Frontend Production Build:**
+   * Command: `npm run build` -> PASSED (Next.js 14 compiled 5/5 static pages).
 
 ---
 
@@ -105,63 +93,52 @@ No mock data, fake UIs, unauthorized database connections, or unapproved feature
 * **ADR-003:** Centralized LLMService.
 * **ADR-004:** AST-Based SQL Safety Validator (`sqlglot`).
 * **ADR-005:** Dual-Layer Multi-Tenancy Enforcement (Supabase RLS + Qdrant payload filters).
-* **ADR-006 (Phase 1):** Monorepo foundation with clean module separation (`frontend/`, `backend/`, `ai/`, `database/`, `data/`, `documents/`, `evaluation/`, `infrastructure/`).
+* **ADR-006:** Monorepo foundation with clean module separation.
+* **ADR-007 (Phase 2):** Async SQLAlchemy ORM model layer with generic `BaseRepository` pattern and dual-environment URL normalizer (Supabase PostgreSQL + Async SQLite test fallback).
 
 ---
 
 ## 7. Current Project Status Report
 
 ```
-PHASE 1 STATUS
+PHASE 2 STATUS
 
-Frontend:
-[PASS] (Next.js 14 App Router + TS + Tailwind + shadcn/ui foundation)
+Database Schema & Migrations:
+[PASS] (001_initial_schema.sql & 002_enable_rls.sql established)
 
-Backend:
-[PASS] (FastAPI + Pydantic + Uvicorn + GET /health returning {"status": "ok"})
+Async SQLAlchemy Core & Engine:
+[PASS] (AsyncEngine, session factory, get_db dependency in backend/app/core/database.py)
 
-AI structure:
-[PASS] (Modular packages created for agents, orchestration, llm, rag, analytics, validation, tools, prompts)
+ORM Models (Tenancy, NovaMart Domain, System):
+[PASS] (15 ORM models implemented in backend/app/models/)
 
-Database structure:
-[PASS] (Planning layout for migrations, seeds, scripts created)
-
-Data structure:
-[PASS] (Synthetic demo dataset generation layout created)
-
-Documents structure:
-[PASS] (Ingestion & sample storage layout created)
-
-Evaluation structure:
-[PASS] (Benchmark suite layout created)
-
-Git/environment configuration:
-[PASS] (.gitignore, .env.example, README.md created)
+Async Repository Pattern:
+[PASS] (BaseRepository CRUD operations in backend/app/repositories/base.py)
 
 Tests:
-[PASS] (pytest suite passing 2/2 tests)
+[PASS] (Pytest suite passing 6/6 tests)
 
-Build:
-[PASS] (Next.js build succeeded 4/4 static pages compiled)
+Build & Quality:
+[PASS] (Next.js build succeeded 5/5 pages, 0 TS/ESLint errors)
 
-Files created:
-- .gitignore
-- .env.example
-- README.md
-- ARCHITECTURE.md
+Files created/updated:
+- database/migrations/001_initial_schema.sql
+- database/migrations/002_enable_rls.sql
+- backend/app/core/database.py
+- backend/app/core/config.py
+- backend/app/models/base.py
+- backend/app/models/tenancy.py
+- backend/app/models/business.py
+- backend/app/models/system.py
+- backend/app/models/__init__.py
+- backend/app/repositories/base.py
+- backend/tests/test_database.py
+- backend/requirements.txt
 - PROJECT_STATUS.md
-- frontend/ (package.json, tsconfig.json, next.config.mjs, tailwind.config.ts, postcss.config.mjs, .eslintrc.json, app/layout.tsx, app/page.tsx, app/globals.css, app/api/health/route.ts, lib/utils.ts, types/index.ts)
-- backend/ (app/main.py, app/core/config.py, app/__init__.py, app/api/__init__.py, app/models/__init__.py, app/schemas/__init__.py, app/services/__init__.py, app/repositories/__init__.py, tests/test_health.py, tests/__init__.py, requirements.txt, pyproject.toml)
-- ai/ (agents/, orchestration/, llm/, rag/, analytics/, validation/, tools/, prompts/, tests/, README.md)
-- database/ (migrations/, seeds/, scripts/, README.md)
-- data/ (generators/, raw/, processed/, README.md)
-- documents/ (sample/, uploads/, processed/, README.md)
-- evaluation/ (datasets/, tests/, reports/, README.md)
-- infrastructure/ (docker/, deployment/, cicd/, README.md)
 
 Known issues:
 - None
 
 Next phase:
-PHASE 2 — SUPABASE DATABASE FOUNDATION
+PHASE 3 — DEMO DATA GENERATION (NOVAMART RETAIL)
 ```
