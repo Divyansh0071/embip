@@ -54,12 +54,15 @@ Thumbs.db
 *.swo
 
 # Temporary & Uploads
+*.db
+*.sqlite3
 documents/uploads/*
 !documents/uploads/.gitkeep
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/output/*.csv
 documents/processed/*
 !documents/processed/.gitkeep
 evaluation/reports/*

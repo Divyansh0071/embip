@@ -1,9 +1,9 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
 **Project Name:** EMBIP — Enterprise Multi-Agent Business Intelligence Platform<br/>
-**Current Phase:** Phase 4 — Landing Page, Pricing & Layout Shell (COMPLETED)<br/>
+**Current Phase:** Phase 5 — Demo Enterprise Data Generation (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 4 Complete & Verified | Ready for Phase 5 Approval<br/>
+**Overall Status:** Phase 5 Complete & Verified | Ready for Phase 6 Approval<br/>
 
 ---
 
@@ -14,14 +14,15 @@
 * **Phase 2 (Supabase Database Foundation):** COMPLETED.
 * **Phase 3 (Authentication & Authorization):** COMPLETED & VERIFIED.
 * **Phase 4 (Landing Page, Pricing & Layout Shell):** COMPLETED & VERIFIED.
-  * Public Landing Page (`/`) created with 10 design-aligned sections (Navbar, Hero, Value Proposition, Core Capabilities, How It Works, Multi-Agent Architecture, Security & Governance, Demo Pricing, Call-to-Action, and Footer).
-  * Auth-Aware Public Navigation: Automatically detects Supabase session and routes logged-in users to `/dashboard` or allows standard `/login` / `/signup` flows.
-  * Authenticated Application Shell (`AppShell`, `Sidebar`, `Header`, `UserMenu`, `MobileSidebar`): Built reusable responsive B2B SaaS layout with Lucide icon navigation, workspace context (`NovaMart Retail Solutions`), and user dropdown control.
-  * Role-Aware Navigation: Displays Admin link only for users with `ADMIN` role; server-side 403 authorization guard on `/admin` remains strictly authoritative and unchanged.
-  * Dashboard Shell (`/dashboard`): Implemented initial BI dashboard shell with KPI metric cards, chart placeholder, recent AI queries, and recent reports section with realistic empty states.
-  * Protected Placeholder Module Routes (`/analytics`, `/ask`, `/documents`, `/data`, `/reports`, `/settings`, `/admin`): Updated all 7 module routes to use `AppShell` with clear "Coming in Phase X" indicators.
-  * Passed full quality verification: `npm run type-check` (0 TS errors), `npm run lint` (0 ESLint errors/warnings), `npm run build` (16/16 routes compiled successfully), backend pytest (11/11 passing), `git diff --check` (0 whitespace issues), and generated-file audit.
-  * **Phase 5 (Demo Data Generation) has NOT been started.**
+* **Phase 5 (Demo Enterprise Data Generation - NovaMart):** COMPLETED & VERIFIED.
+  * Synthetic dataset generated for **NovaMart Retail Solutions** spanning 3 years (`2023-10-01` to `2026-09-18`).
+  * Target entity scale generated: 1 Organization, 1 Workspace (`NovaMart Analytics`), 10 Retail Stores (Indian cities), 5 Logistics Warehouses, 10 Categories, 50 Products, 250 Inventory records, 200 Employees, 20,000 Customers, 100,000 Sales Transactions, 193,416 Sales Items, and 1,800 Operating Expense records.
+  * Deterministic random seed (`42`) used for 100% reproducible generation.
+  * Quality validation suite (`data/scripts/validate_demo_data.py`) passed 100% of PK/FK uniqueness, date range, and mathematical line-item/transaction consistency checks (`data/output/validation_report.json`).
+  * Idempotent, safe database seeder (`data/scripts/seed_database.py`) created and verified (seeded 300,000+ rows into database schema in 34s).
+  * Golden ground-truth evaluation dataset (`evaluation/datasets/novamart_ground_truth.json`) generated directly from dataset with exact calculated answers for 10 BI evaluation questions.
+  * Passed full quality suite: backend pytest (11/11 passing), frontend type-check (0 TS errors), frontend lint (0 errors), frontend build (16/16 routes compiled), `git diff --check` (0 issues).
+  * **Phase 6 (Dashboard & Metrics View) has NOT been started.**
 
 ---
 
@@ -34,8 +35,9 @@
 | **Phase 2** | **Supabase Database Foundation** | **COMPLETED** | DDL migrations, Async SQLAlchemy models, RLS policies, Pytest suite |
 | **Phase 3** | **Authentication & Authorization** | **COMPLETED** | Supabase Auth SSR, Auth UI, Next.js Middleware, FastAPI JWT & RBAC |
 | **Phase 4** | **Landing Page, Pricing & Layout Shell** | **COMPLETED** | Public landing page, pricing, auth navbar, footer, AppShell, sidebar, dashboard shell |
-| **Phase 5** | Demo Data Generation (NovaMart) | *UPCOMING* | Seed generators for 10 stores, 5 warehouses, 50 products, 100k sales |
-| **Phase 6** | Dashboard & Metrics View | *PENDING* | Overview metric cards, summary charts, workspace status |
+| **Phase 5** | **Demo Enterprise Data Generation** | **COMPLETED** | NovaMart 3-yr dataset, 100k sales tx, 20k customers, validators, DB seeder, ground-truth eval |
+| **Phase 6** | Dashboard & Metrics View | *UPCOMING* | Overview metric cards, summary charts, workspace status |
+
 | **Phase 7** | Document Ingestion Pipeline | *PENDING* | PDF/DOCX/TXT/CSV/XLSX parsing, Supabase Storage integration |
 | **Phase 8** | Vector Storage & RAG Engine | *PENDING* | Qdrant Cloud collection indexing, semantic search, payload filters |
 | **Phase 9** | SQL Agent & AST Security Validator | *PENDING* | `sqlglot` AST validator, read-only SQL generator, timeout wrapper |
@@ -108,61 +110,79 @@
 ## 6. Current Project Status Report
 
 ```
-PHASE 4 STATUS: COMPLETE
+PHASE 5 STATUS: COMPLETE
 
-1. Landing page: PASS
-2. Navbar: PASS
-3. Footer: PASS
-4. Pricing: PASS
-5. Application shell: PASS
-6. Sidebar: PASS
-7. Header/user menu: PASS
-8. Dashboard shell: PASS
-9. Placeholder routes: PASS
-10. Admin protection: PASS
-11. Responsive design: PASS
-12. Accessibility: PASS
-13. Authentication regression: PASS
-14. Type-check: PASS
-15. Lint: PASS
-16. Build: PASS
-17. Backend tests: 11/11 PASS
-18. git diff --check: PASS
-19. Generated-file audit: PASS
+Dataset:
+- Organization: PASS (1 record)
+- Workspaces: PASS (1 record)
+- Stores: 10
+- Warehouses: 5
+- Products: 50
+- Employees: 200
+- Customers: 20,000
+- Sales transactions: 100,000
+- Sales line items: 193,416
+- Inventory records: 250
+
+Historical range:
+- 2023-10-01 -> 2026-09-18 (3 Years)
+
+Data integrity:
+- Primary keys: PASS
+- Foreign keys: PASS
+- Required fields: PASS
+- Uniqueness: PASS
+- Monetary consistency: PASS
+- Transaction totals: PASS
+- Date validity: PASS
+
+Generation:
+- Deterministic seed: PASS (Seed 42)
+- Generation script: PASS
+- Validation script: PASS
+- Database seeding: PASS (300k+ rows inserted in 34.45s)
+
+Evaluation:
+- Ground-truth questions: 10
+- Expected answers calculated from actual dataset: PASS
+
+Tests:
+- Backend pytest: 11/11 PASS
+- Data validation: PASS (data/output/validation_report.json)
+- Frontend type-check: PASS
+- Frontend lint: PASS
+- Frontend build: PASS (16/16 routes)
+
+Security:
+- Real credentials found: NO
+- Real personal data found: NO
+
+Git:
+- diff --check: PASS
+- Working tree: UNCOMMITTED (as requested)
+- Commit performed: NO
+- Push performed: NO
 
 Files created/modified:
   - .gitignore
-  - frontend/app/page.tsx
-  - frontend/app/dashboard/page.tsx
-  - frontend/app/analytics/page.tsx
-  - frontend/app/ask/page.tsx
-  - frontend/app/documents/page.tsx
-  - frontend/app/data/page.tsx
-  - frontend/app/reports/page.tsx
-  - frontend/app/settings/page.tsx
-  - frontend/app/admin/page.tsx
-  - frontend/components/landing/Navbar.tsx
-  - frontend/components/landing/Hero.tsx
-  - frontend/components/landing/ValueProp.tsx
-  - frontend/components/landing/Capabilities.tsx
-  - frontend/components/landing/HowItWorks.tsx
-  - frontend/components/landing/AgentArchitecture.tsx
-  - frontend/components/landing/SecuritySection.tsx
-  - frontend/components/landing/Pricing.tsx
-  - frontend/components/landing/Footer.tsx
-  - frontend/components/layout/AppShell.tsx
-  - frontend/components/layout/Sidebar.tsx
-  - frontend/components/layout/Header.tsx
-  - frontend/components/layout/UserMenu.tsx
-  - frontend/components/dashboard/DashboardShell.tsx
+  - backend/requirements.txt
+  - data/README.md
+  - data/generators/__init__.py
+  - data/generators/config.py
+  - data/generators/generate_data.py
+  - data/generators/retail_generator.py
+  - data/generators/sales_generator.py
+  - data/output/*.csv
+  - data/output/validation_report.json
+  - data/scripts/generate_demo_data.py
+  - data/scripts/validate_demo_data.py
+  - data/scripts/seed_database.py
+  - evaluation/README.md
+  - evaluation/datasets/novamart_ground_truth.json
+  - evaluation/scripts/generate_ground_truth.py
   - PROJECT_STATUS.md
 
-Known limitations:
-  - Synthetic metrics and charts are illustrative placeholders until Phase 5 demo data and Phase 6 metrics engine are connected.
-  - Interactive multi-agent orchestration will be connected in Phase 10.
-
-Whether Phase 5 is ready: YES
-Phase 5 started: NO
+Whether Phase 6 is ready: YES
+Phase 6 started: NO
 Git commit/push performed: NO
 ```
-
