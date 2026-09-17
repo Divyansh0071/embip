@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.v1.api import api_router
 from app.core.config import settings
 
 app = FastAPI(
@@ -18,6 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Register API Router
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
 
 @app.get("/health", status_code=200, tags=["Health"])
 async def health_check():
@@ -32,5 +36,5 @@ async def root():
         "name": settings.PROJECT_NAME,
         "version": "0.1.0",
         "status": "running",
-        "phase": "Phase 1 - Project Foundation",
+        "phase": "Phase 3 - Authentication & Authorization",
     }
