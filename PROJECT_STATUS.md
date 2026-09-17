@@ -1,9 +1,9 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
 **Project Name:** EMBIP — Enterprise Multi-Agent Business Intelligence Platform<br/>
-**Current Phase:** Phase 3 — Authentication & Authorization (COMPLETED)<br/>
+**Current Phase:** Phase 4 — Landing Page, Pricing & Layout Shell (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 3 Complete & Verified | Ready for Phase 4 Approval<br/>
+**Overall Status:** Phase 4 Complete & Verified | Ready for Phase 5 Approval<br/>
 
 ---
 
@@ -13,14 +13,15 @@
 * **Phase 1 (Project Foundation & Monorepo Structure):** COMPLETED.
 * **Phase 2 (Supabase Database Foundation):** COMPLETED.
 * **Phase 3 (Authentication & Authorization):** COMPLETED & VERIFIED.
-  * Real Supabase Auth SSR integration established in Next.js App Router (`lib/supabase/client.ts`, `server.ts`, `middleware.ts`).
-  * Full B2B Auth UI implemented (`/login`, `/signup`, `/auth/callback`, `/dashboard`, `/admin`).
-  * Next.js Middleware route protection for `/dashboard`, `/analytics`, `/ask`, `/documents`, `/data`, `/reports`, `/settings`, `/admin`.
-  * FastAPI JWT verification dependency (`get_current_user`) and RBAC checker (`require_role`) implemented in `backend/app/core/security.py`.
-  * Protected API endpoints (`GET /api/v1/auth/me` and `GET /api/v1/admin/status`) added.
-  * DB Migration `003_auth_rbac_rls.sql` created for user profile and default workspace onboarding triggers.
-  * Pytest auth test suite (`tests/test_auth.py`) passing 5/5 auth security tests (11/11 total backend tests).
-  * Next.js production build passing 14/14 static and dynamic routes.
+* **Phase 4 (Landing Page, Pricing & Layout Shell):** COMPLETED & VERIFIED.
+  * Public Landing Page (`/`) created with 10 design-aligned sections (Navbar, Hero, Value Proposition, Core Capabilities, How It Works, Multi-Agent Architecture, Security & Governance, Demo Pricing, Call-to-Action, and Footer).
+  * Auth-Aware Public Navigation: Automatically detects Supabase session and routes logged-in users to `/dashboard` or allows standard `/login` / `/signup` flows.
+  * Authenticated Application Shell (`AppShell`, `Sidebar`, `Header`, `UserMenu`, `MobileSidebar`): Built reusable responsive B2B SaaS layout with Lucide icon navigation, workspace context (`NovaMart Retail Solutions`), and user dropdown control.
+  * Role-Aware Navigation: Displays Admin link only for users with `ADMIN` role; server-side 403 authorization guard on `/admin` remains strictly authoritative and unchanged.
+  * Dashboard Shell (`/dashboard`): Implemented initial BI dashboard shell with KPI metric cards, chart placeholder, recent AI queries, and recent reports section with realistic empty states.
+  * Protected Placeholder Module Routes (`/analytics`, `/ask`, `/documents`, `/data`, `/reports`, `/settings`, `/admin`): Updated all 7 module routes to use `AppShell` with clear "Coming in Phase X" indicators.
+  * Passed full quality verification: `npm run type-check` (0 TS errors), `npm run lint` (0 ESLint errors/warnings), `npm run build` (16/16 routes compiled successfully), backend pytest (11/11 passing), `git diff --check` (0 whitespace issues), and generated-file audit.
+  * **Phase 5 (Demo Data Generation) has NOT been started.**
 
 ---
 
@@ -32,8 +33,8 @@
 | **Phase 1** | **Project Foundation & Repo Structure** | **COMPLETED** | Monorepo layout, Next.js init, FastAPI init, lint/type/build pass |
 | **Phase 2** | **Supabase Database Foundation** | **COMPLETED** | DDL migrations, Async SQLAlchemy models, RLS policies, Pytest suite |
 | **Phase 3** | **Authentication & Authorization** | **COMPLETED** | Supabase Auth SSR, Auth UI, Next.js Middleware, FastAPI JWT & RBAC |
-| **Phase 4** | Demo Data Generation (NovaMart) | *UPCOMING* | Seed generators for 10 stores, 5 warehouses, 50 products, 100k sales |
-| **Phase 5** | Frontend Shell & Layout | *PENDING* | App router, navigation, sidebar, dark mode, workspace switcher |
+| **Phase 4** | **Landing Page, Pricing & Layout Shell** | **COMPLETED** | Public landing page, pricing, auth navbar, footer, AppShell, sidebar, dashboard shell |
+| **Phase 5** | Demo Data Generation (NovaMart) | *UPCOMING* | Seed generators for 10 stores, 5 warehouses, 50 products, 100k sales |
 | **Phase 6** | Dashboard & Metrics View | *PENDING* | Overview metric cards, summary charts, workspace status |
 | **Phase 7** | Document Ingestion Pipeline | *PENDING* | PDF/DOCX/TXT/CSV/XLSX parsing, Supabase Storage integration |
 | **Phase 8** | Vector Storage & RAG Engine | *PENDING* | Qdrant Cloud collection indexing, semantic search, payload filters |
@@ -107,49 +108,61 @@
 ## 6. Current Project Status Report
 
 ```
-PHASE 3 STATUS: COMPLETE
+PHASE 4 STATUS: COMPLETE
 
-1. Authentication implemented: PASS
-2. Supabase integration: PASS
-3. Profile handling: PASS
-4. Organization/workspace handling: PASS
-5. RBAC: PASS
-6. Protected frontend routes: PASS
-7. FastAPI authentication: PASS
-8. Protected API endpoint: PASS
-9. Security checks: PASS
-10. Tests: PASS
-11. Build/lint results: PASS
-12. Files created/modified:
-  - frontend/lib/supabase/client.ts
-  - frontend/lib/supabase/server.ts
-  - frontend/lib/supabase/middleware.ts
-  - frontend/middleware.ts
-  - frontend/app/login/page.tsx
-  - frontend/app/signup/page.tsx
-  - frontend/app/auth/callback/route.ts
+1. Landing page: PASS
+2. Navbar: PASS
+3. Footer: PASS
+4. Pricing: PASS
+5. Application shell: PASS
+6. Sidebar: PASS
+7. Header/user menu: PASS
+8. Dashboard shell: PASS
+9. Placeholder routes: PASS
+10. Admin protection: PASS
+11. Responsive design: PASS
+12. Accessibility: PASS
+13. Authentication regression: PASS
+14. Type-check: PASS
+15. Lint: PASS
+16. Build: PASS
+17. Backend tests: 11/11 PASS
+18. git diff --check: PASS
+19. Generated-file audit: PASS
+
+Files created/modified:
+  - .gitignore
+  - frontend/app/page.tsx
   - frontend/app/dashboard/page.tsx
-  - frontend/app/admin/page.tsx
   - frontend/app/analytics/page.tsx
   - frontend/app/ask/page.tsx
   - frontend/app/documents/page.tsx
   - frontend/app/data/page.tsx
   - frontend/app/reports/page.tsx
   - frontend/app/settings/page.tsx
-  - frontend/components/auth/LogoutButton.tsx
-  - backend/app/core/security.py
-  - backend/app/api/v1/endpoints/auth.py
-  - backend/app/api/v1/api.py
-  - backend/app/main.py
-  - backend/tests/test_auth.py
-  - database/migrations/003_auth_rbac_rls.sql
+  - frontend/app/admin/page.tsx
+  - frontend/components/landing/Navbar.tsx
+  - frontend/components/landing/Hero.tsx
+  - frontend/components/landing/ValueProp.tsx
+  - frontend/components/landing/Capabilities.tsx
+  - frontend/components/landing/HowItWorks.tsx
+  - frontend/components/landing/AgentArchitecture.tsx
+  - frontend/components/landing/SecuritySection.tsx
+  - frontend/components/landing/Pricing.tsx
+  - frontend/components/landing/Footer.tsx
+  - frontend/components/layout/AppShell.tsx
+  - frontend/components/layout/Sidebar.tsx
+  - frontend/components/layout/Header.tsx
+  - frontend/components/layout/UserMenu.tsx
+  - frontend/components/dashboard/DashboardShell.tsx
   - PROJECT_STATUS.md
-13. Known issues: None
-14. Exact manual verification steps:
-  - Navigate to /login or /signup
-  - Register or authenticate with Supabase Auth
-  - Verify session cookie establishment & redirect to /dashboard
-  - Verify /admin displays 403 Access Denied unless logged in as ADMIN
-  - Execute GET /api/v1/auth/me with Bearer token
-15. Whether Phase 4 is ready: YES
+
+Known limitations:
+  - Synthetic metrics and charts are illustrative placeholders until Phase 5 demo data and Phase 6 metrics engine are connected.
+  - Interactive multi-agent orchestration will be connected in Phase 10.
+
+Whether Phase 5 is ready: YES
+Phase 5 started: NO
+Git commit/push performed: NO
 ```
+

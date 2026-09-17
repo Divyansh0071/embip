@@ -2,8 +2,9 @@ import React from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AppShell } from "@/components/layout/AppShell";
 import { ShieldAlert, ShieldCheck, ArrowLeft, Users, Settings, Key } from "lucide-react";
+
 
 export default async function AdminPortalPage() {
   const supabase = await createClient();
@@ -42,76 +43,52 @@ export default async function AdminPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 px-6 py-4 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-600 font-bold text-white">
-              A
+    <AppShell user={user} role="ADMIN" title="System & RBAC Administration">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="p-8 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <ShieldCheck className="h-6 w-6" />
             </div>
-            <span className="font-semibold text-white tracking-wide">
-              EMBIP Admin Portal
-            </span>
+            <div>
+              <h2 className="text-lg font-bold text-white">Administration & Access Control Portal</h2>
+              <p className="text-xs text-slate-400">Manage organization settings, workspace roles, audit logs, and access permissions</p>
+            </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <Link
-              href="/dashboard"
-              className="text-xs text-slate-400 hover:text-white transition flex items-center space-x-1"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Dashboard</span>
-            </Link>
-            <LogoutButton />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-5 shadow-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <Users className="h-5 w-5 text-blue-400" />
+                <h3 className="text-sm font-semibold text-white">Workspace Members & RBAC</h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Manage member roles: ADMIN, MANAGER, ANALYST, VIEWER. Server-side role validation enforced via Supabase JWT.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-5 shadow-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <Key className="h-5 w-5 text-amber-400" />
+                <h3 className="text-sm font-semibold text-white">API Keys & Tokens</h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Configure server-side Supabase credentials, service role secrets, and JWT token expiry parameters.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-5 shadow-lg">
+              <div className="flex items-center space-x-3 mb-3">
+                <Settings className="h-5 w-5 text-emerald-400" />
+                <h3 className="text-sm font-semibold text-white">Audit & RLS Compliance</h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Audit log activity tracking & Row Level Security (RLS) policy verification across tenant organization schemas.
+              </p>
+            </div>
           </div>
         </div>
-      </header>
-
-      {/* Content */}
-      <main className="mx-auto max-w-7xl p-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center space-x-2">
-            <ShieldCheck className="h-6 w-6 text-amber-500" />
-            <span>System & RBAC Administration</span>
-          </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Manage organization settings, workspace roles, audit logs, and access permissions
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 shadow-lg">
-            <div className="flex items-center space-x-3 mb-3">
-              <Users className="h-5 w-5 text-blue-400" />
-              <h3 className="text-sm font-semibold text-white">Workspace Members & RBAC</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Manage member roles: ADMIN, MANAGER, ANALYST, VIEWER.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 shadow-lg">
-            <div className="flex items-center space-x-3 mb-3">
-              <Key className="h-5 w-5 text-amber-400" />
-              <h3 className="text-sm font-semibold text-white">API Keys & Tokens</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Configure server-side Supabase credentials and JWT token expiry parameters.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 shadow-lg">
-            <div className="flex items-center space-x-3 mb-3">
-              <Settings className="h-5 w-5 text-emerald-400" />
-              <h3 className="text-sm font-semibold text-white">Audit & RLS Compliance</h3>
-            </div>
-            <p className="text-xs text-slate-400">
-              Audit log activity tracking & Row Level Security policy verification.
-            </p>
-          </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
