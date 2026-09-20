@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 11 — Analytics Agent (COMPLETED)<br/>
+**Current Phase:** Phase 12 — Visualization Agent (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 11 Complete & Verified | Ready for Phase 12 Approval<br/>
+**Overall Status:** Phase 12 Complete & Verified | Ready for Phase 13 Approval<br/>
 
 ---
 
@@ -20,14 +20,14 @@
 * **Phase 9 (SQL Agent & AST Security Validator):** COMPLETED & VERIFIED.
 * **Phase 10 (Planner Agent & LangGraph Orchestration):** COMPLETED & VERIFIED.
 * **Phase 11 (Analytics Agent & Deterministic Calculation Engine):** COMPLETED & VERIFIED.
-  * Dedicated backend analytics package created in `backend/app/ai/analytics/` (`exceptions`, `models`, `operations`, `validators`, `statistics`, `registry`, `prompts`, `agent`, `service`).
-  * 20+ controlled mathematical & statistical operations registered in `ANALYTICS_OPERATIONS` covering descriptive stats, business metrics (AOV, gross profit, margin %), comparisons, growth rate, CAGR, ranking (top/bottom N), grouped aggregations, and time-series resampling.
-  * Strict security controls: Zero arbitrary code execution (`eval`/`exec`/shell/subprocess forbidden).
-  * Data safety: Bounds check (`ANALYTICS_MAX_INPUT_ROWS = 10000`), zero-denominator warning handling, numeric type coercion, NaN/Null tracking.
-  * LangGraph Integration: Sequential dependency flow (`Planner` -> `SQL Agent` -> `Analytics Agent` -> `Merge Node`).
-  * Ground-truth verification: Tested against `novamart_ground_truth.json` benchmarks.
-  * Frontend UI: Enhanced `OrchestrationView.tsx` with Analytics Output card (KPI metrics, grouped tables, time-series, executive explanation, warnings).
-  * Test Suite: Full 124/124 backend pytest tests passing, frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 routes passing), `git diff --check` (0 issues).
+* **Phase 12 (Visualization Agent & Recharts Spec Engine):** COMPLETED & VERIFIED.
+  * Dedicated backend visualization package created in `backend/app/ai/visualization/` (`exceptions`, `models`, `decision_matrix`, `generator`, `validators`, `prompts`, `agent`, `service`).
+  * Algorithmic `ChartDecisionMatrix` deterministically selecting optimal visual types (`bar_chart`, `horizontal_bar_chart`, `line_chart`, `area_chart`, `pie_chart`, `grouped_bar_chart`, `metric_card`).
+  * Recharts JSON Spec Generator & Validator enforcing strict schema compliance (data keys, colors, axes, legend, tooltips, dataset bounds `MAX_CHART_POINTS = 50`).
+  * Centralized `LLMService` metadata enrichment (executive title, subtitle, visual insight text).
+  * LangGraph Integration: Sequential capability pipeline (`Planner` -> `SQL` / `Analytics` -> `Visualization` -> `Merge Node`).
+  * Frontend Recharts Renderer Component: Created `RechartsRenderer.tsx` and mounted in `OrchestrationView.tsx`.
+  * Test Suite: Full 145/145 backend pytest tests passing, frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -47,7 +47,7 @@
 | **Phase 9** | **SQL Agent & AST Security Validator** | **COMPLETED** | `sqlglot` AST validator, read-only SQL generator, timeout wrapper, POST /api/v1/sql/query, SQLQueryTester UI |
 | **Phase 10** | **Planner & LangGraph Orchestration** | **COMPLETED** | LangGraph `StateGraph`, 7-agent graph state routing, POST /api/v1/ask, OrchestrationView UI |
 | **Phase 11** | **Analytics Agent** | **COMPLETED** | Pandas/NumPy computational agent, statistical transformations, ANALYTICS_OPERATIONS registry |
-| **Phase 12** | Visualization Agent | *PENDING* | Chart decision matrix, Recharts JSON generator |
+| **Phase 12** | **Visualization Agent** | **COMPLETED** | Chart decision matrix, Recharts JSON generator, RechartsRenderer UI |
 | **Phase 13** | Validation & Guardrails Agent | *PENDING* | Factual cross-checking, hallucination detection, guardrails |
 | **Phase 14** | Natural Language Ask Interface | *PENDING* | Prompt interface, live SSE stream visualization, SQL viewer |
 | **Phase 15** | Reporting Engine & Exporter | *PENDING* | Markdown report renderer, PDF generation, export endpoints |

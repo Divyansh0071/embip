@@ -9,6 +9,7 @@ from typing import Any, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.analytics import AnalyticsInput, analytics_service
+from app.ai.visualization import visualization_service
 from app.ai.rag import rag_service
 from app.ai.sql import SQLQueryRequest, sql_service
 from app.ai.orchestration.planner import planner_agent
@@ -156,15 +157,27 @@ async def analytics_node(state: OrchestrationState) -> Dict[str, Any]:
 
 async def visualization_node(state: OrchestrationState) -> Dict[str, Any]:
     """
-    Graph Node: Phase 12 Visualization Agent Adapter Placeholder.
+    Graph Node: Executes Phase 12 Visualization Agent to generate Recharts JSON specs.
     """
-    logger.info("visualization_node called (Phase 12 placeholder adapter).")
-    return {
-        "visualization_result": {
-            "status": "not_implemented",
-            "message": "Visualization Agent chart engine will be implemented in Phase 12.",
+    question = state["question"]
+    sql_res = state.get("sql_result")
+    analytics_res = state.get("analytics_result")
+
+    try:
+        res = await visualization_service.generate_spec(
+            question=question,
+            sql_result=sql_res,
+            analytics_result=analytics_res,
+        )
+        return {"visualization_result": res.model_dump()}
+    except Exception as e:
+        logger.error(f"visualization_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"Visualization Agent error: {str(e)}")
+        return {
+            "visualization_result": {"status": "error", "error": str(e)},
+            "errors": errors,
         }
-    }
 
 
 async def merge_node(state: OrchestrationState) -> Dict[str, Any]:

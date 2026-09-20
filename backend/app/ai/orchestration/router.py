@@ -75,6 +75,17 @@ class OrchestrationRouter:
             return "visualization_node"
         return "merge_node"
 
+    def route_after_analytics(self, state: OrchestrationState) -> str:
+        """
+        Determines next node after analytics_node completes.
+        Routes to visualization_node if plan requires visualization, else merge_node.
+        """
+        plan = state.get("plan") or {}
+        if plan.get("requires_visualization"):
+            logger.info("Routing from analytics_node to visualization_node.")
+            return "visualization_node"
+        return "merge_node"
+
 
 # Singleton Instance
 orchestration_router = OrchestrationRouter()

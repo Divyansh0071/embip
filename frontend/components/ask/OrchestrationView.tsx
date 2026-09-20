@@ -14,6 +14,7 @@ import {
   Loader2,
   Table as TableIcon,
 } from "lucide-react";
+import { RechartsRenderer, RechartsSpec } from "../visualization/RechartsRenderer";
 
 interface PlannerPlan {
   intent: string;
@@ -72,7 +73,10 @@ interface AskResponse {
     } | null;
     visualization?: {
       status: string;
-      message: string;
+      spec?: RechartsSpec | null;
+      explanation?: string | null;
+      error?: string | null;
+      message?: string;
     } | null;
   };
   errors: string[];
@@ -411,12 +415,12 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
             </div>
           )}
 
-          {/* Visualization Adapter Notice */}
-          {askResponse.results.visualization?.status === "not_implemented" && (
-            <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-xs text-rose-300">
-              <span className="font-bold">Visualization Engine (Phase 12): </span>
-              {askResponse.results.visualization.message}
-            </div>
+          {/* Visualization Agent Recharts Output */}
+          {askResponse.results.visualization?.spec && (
+            <RechartsRenderer
+              spec={askResponse.results.visualization.spec}
+              explanation={askResponse.results.visualization.explanation}
+            />
           )}
         </div>
       )}
