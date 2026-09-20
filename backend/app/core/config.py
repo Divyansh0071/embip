@@ -11,6 +11,14 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./embip.db"
     DATABASE_READONLY_URL: str = "sqlite+aiosqlite:///./embip.db"
 
+    # SQL Execution Safety
+    SQL_STATEMENT_TIMEOUT_SECONDS: float = 10.0
+    SQL_MAX_ROWS: int = 500
+    SQL_MAX_RESULT_BYTES: int = 5_000_000
+    SQL_MAX_QUERY_LENGTH: int = 2000
+    SQL_MAX_RETRIES: int = 1
+
+
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",

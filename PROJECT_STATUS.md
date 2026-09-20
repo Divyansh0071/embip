@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 8 — Embeddings, Qdrant & RAG Retrieval (COMPLETED)<br/>
+**Current Phase:** Phase 9 — SQL Agent & SQL Security (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 8 Complete & Verified | Ready for Phase 9 Approval<br/>
+**Overall Status:** Phase 9 Complete & Verified | Ready for Phase 10 Approval<br/>
 
 ---
 
@@ -17,15 +17,16 @@
 * **Phase 6 (Centralized LLM Service & AI Foundation):** COMPLETED & VERIFIED.
 * **Phase 7 (Document Ingestion & Processing Pipeline):** COMPLETED & VERIFIED.
 * **Phase 8 (Embeddings, Qdrant & RAG Retrieval):** COMPLETED & VERIFIED.
-  * Extensible `EmbeddingService` abstraction supporting OpenAI embeddings (`text-embedding-3-small`, 1536 dim) with exponential backoff retries and secret sanitization.
-  * Production-ready `VectorStoreService` & `QdrantVectorStore` abstraction supporting Cosine distance vector indexing, payload metadata storage (`workspace_id`, `document_id`, `chunk_id`, `file_name`, `page_number`, `sheet_name`, `content`), and workspace-scoped payload filtering for multi-tenant isolation.
-  * Seamless document ingestion integration: `DocumentProcessingService` automatically vectorises document text chunks and upserts vectors into Qdrant during upload, updating status to `processed` or capturing errors without losing database chunk integrity.
-  * Automatic vector cleanup: `DELETE /api/v1/documents/{id}` automatically purges corresponding document vector points from Qdrant.
-  * Production-ready `RAGRetrievalService` returning structured citations (`RAGChunkCitation`) with score, chunk index, document metadata, page numbers, and sheet names.
-  * FastAPI endpoint `POST /api/v1/rag/search` protected with JWT authentication and workspace isolation.
-  * Interactive `RAGSearchTester.tsx` UI component integrated into `/documents` page for live semantic retrieval verification.
-  * 100% mocked automated test suite (`backend/tests/test_embeddings.py`, `test_vectorstore.py`, `test_rag.py`) passing 52/52 backend tests with 0 external paid API calls.
-  * Quality validation suite: backend pytest (52/52 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
+* **Phase 9 (SQL Agent & AST Security Validator):** COMPLETED & VERIFIED.
+  * Created dedicated `backend/app/ai/sql/` module with `SchemaContextService`, `SQLValidator`, `SQLSanitizer`, `SQLExecutor`, `SQLAgent`, and `SQLService`.
+  * AST-based security enforcement using `sqlglot` strictly restricting execution to single-statement `SELECT` / `CTE` queries while blocking `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `GRANT`, `REVOKE`, transaction statements, and dangerous functions (`pg_sleep`, `lo_import`, `dblink_connect`, system setting modifications).
+  * Safe execution engine with statement timeouts (`SQL_STATEMENT_TIMEOUT_SECONDS=10.0`), row limits (`SQL_MAX_ROWS=500`), JSON type serialization (Decimals, dates, datetimes, UUIDs, NULLs), and session-level workspace isolation context (`SET LOCAL app.current_workspace_id`).
+  * Centralized LLM SQL generation with single retry error feedback loop.
+  * Audit logging: Queries recorded in `queries` and `query_executions` database tables.
+  * FastAPI endpoint `POST /api/v1/sql/query` guarded by Supabase JWT auth.
+  * Interactive `SQLQueryTester.tsx` UI component integrated into `/ask` page.
+  * Automated test suite (`backend/tests/test_sql_validator.py`, `test_sql_executor.py`, `test_sql_agent.py`, `test_sql_api.py`) passing 77/77 backend tests.
+  * Quality validation suite: backend pytest (77/77 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -42,7 +43,7 @@
 | **Phase 6** | **Centralized LLM Service & AI Foundation** | **COMPLETED** | LLMProvider, OpenAIProvider, LLMService, Pydantic models, retries, diagnostic endpoint |
 | **Phase 7** | **Document Ingestion Pipeline** | **COMPLETED** | DDL migrations, PDF/DOCX/TXT/CSV/XLSX extractors, cleaner, chunker, storage, FastAPI endpoints |
 | **Phase 8** | **Embeddings, Qdrant & RAG Engine** | **COMPLETED** | OpenAIEmbeddingProvider, QdrantVectorStore, RAGRetrievalService, POST /api/v1/rag/search, RAGSearchTester UI |
-| **Phase 9** | SQL Agent & AST Security Validator | *PENDING* | `sqlglot` AST validator, read-only SQL generator, timeout wrapper |
+| **Phase 9** | **SQL Agent & AST Security Validator** | **COMPLETED** | `sqlglot` AST validator, read-only SQL generator, timeout wrapper, POST /api/v1/sql/query, SQLQueryTester UI |
 | **Phase 10** | Planner & LangGraph Orchestration | *PENDING* | LangGraph `StateGraph`, 7-agent graph state routing |
 | **Phase 11** | Analytics Agent | *PENDING* | Pandas/NumPy computational agent, statistical transformations |
 | **Phase 12** | Visualization Agent | *PENDING* | Chart decision matrix, Recharts JSON generator |
