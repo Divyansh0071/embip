@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 12 — Visualization Agent (COMPLETED)<br/>
+**Current Phase:** Phase 13 — Validation & Guardrails Agent (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 12 Complete & Verified | Ready for Phase 13 Approval<br/>
+**Overall Status:** Phase 13 Complete & Verified | 158/158 Tests Passing<br/>
 
 ---
 
@@ -21,13 +21,14 @@
 * **Phase 10 (Planner Agent & LangGraph Orchestration):** COMPLETED & VERIFIED.
 * **Phase 11 (Analytics Agent & Deterministic Calculation Engine):** COMPLETED & VERIFIED.
 * **Phase 12 (Visualization Agent & Recharts Spec Engine):** COMPLETED & VERIFIED.
-  * Dedicated backend visualization package created in `backend/app/ai/visualization/` (`exceptions`, `models`, `decision_matrix`, `generator`, `validators`, `prompts`, `agent`, `service`).
-  * Algorithmic `ChartDecisionMatrix` deterministically selecting optimal visual types (`bar_chart`, `horizontal_bar_chart`, `line_chart`, `area_chart`, `pie_chart`, `grouped_bar_chart`, `metric_card`).
-  * Recharts JSON Spec Generator & Validator enforcing strict schema compliance (data keys, colors, axes, legend, tooltips, dataset bounds `MAX_CHART_POINTS = 50`).
-  * Centralized `LLMService` metadata enrichment (executive title, subtitle, visual insight text).
-  * LangGraph Integration: Sequential capability pipeline (`Planner` -> `SQL` / `Analytics` -> `Visualization` -> `Merge Node`).
-  * Frontend Recharts Renderer Component: Created `RechartsRenderer.tsx` and mounted in `OrchestrationView.tsx`.
-  * Test Suite: Full 145/145 backend pytest tests passing, frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 routes passing), `git diff --check` (0 issues).
+* **Phase 13 (Validation & Guardrails Agent):** COMPLETED & VERIFIED.
+  * Dedicated backend validation package created in `backend/app/ai/validation/` (`exceptions`, `models`, `checks`, `prompts`, `agent`, `service`).
+  * Pure deterministic check routines for AST safety audit, numerical consistency verification against raw SQL/Analytics datasets, RAG citation quote matching, and SQL vs Document contradiction detection.
+  * `ValidationAgent` providing LLM-assisted claim grounding audit with zero temperature.
+  * `ValidationService` calculating weighted confidence score (0.0 to 1.0) and action classification (`'pass'`, `'retry'`, `'flag'`).
+  * LangGraph Integration: `validation_node` inserted into workflow before `merge_node`, with self-correcting retry loop back to `planner` (up to `MAX_RETRIES = 2`) on low confidence or hallucination.
+  * Frontend Audit UI: Created Validation & Guardrail Safety Audit Card in `OrchestrationView.tsx` with confidence badge, check matrix, and hallucination/contradiction alert banners.
+  * Test Suite: Full 158/158 backend pytest tests passing, frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -48,7 +49,8 @@
 | **Phase 10** | **Planner & LangGraph Orchestration** | **COMPLETED** | LangGraph `StateGraph`, 7-agent graph state routing, POST /api/v1/ask, OrchestrationView UI |
 | **Phase 11** | **Analytics Agent** | **COMPLETED** | Pandas/NumPy computational agent, statistical transformations, ANALYTICS_OPERATIONS registry |
 | **Phase 12** | **Visualization Agent** | **COMPLETED** | Chart decision matrix, Recharts JSON generator, RechartsRenderer UI |
-| **Phase 13** | Validation & Guardrails Agent | *PENDING* | Factual cross-checking, hallucination detection, guardrails |
+| **Phase 13** | **Validation & Guardrails Agent** | **COMPLETED** | Factual cross-checking, hallucination detection, guardrails, retry loop |
+| **Phase 14** | Natural Language Ask Interface | *PENDING* | Prompt interface, live SSE stream visualization, SQL viewer |
 | **Phase 14** | Natural Language Ask Interface | *PENDING* | Prompt interface, live SSE stream visualization, SQL viewer |
 | **Phase 15** | Reporting Engine & Exporter | *PENDING* | Markdown report renderer, PDF generation, export endpoints |
 | **Phase 16** | Evaluation & Quality Benchmarks | *PENDING* | Query accuracy benchmark suite, response quality verification |

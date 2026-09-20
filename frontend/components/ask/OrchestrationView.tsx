@@ -13,6 +13,7 @@ import {
   Clock,
   Loader2,
   Table as TableIcon,
+  ShieldCheck,
 } from "lucide-react";
 import { RechartsRenderer, RechartsSpec } from "../visualization/RechartsRenderer";
 
@@ -77,6 +78,21 @@ interface AskResponse {
       explanation?: string | null;
       error?: string | null;
       message?: string;
+    } | null;
+    validation?: {
+      is_valid: boolean;
+      confidence_score: number;
+      checks: Array<{
+        check_name: string;
+        passed: boolean;
+        score: number;
+        message: string;
+        details?: Record<string, any>;
+      }>;
+      hallucinations_detected: string[];
+      contradictions_detected: string[];
+      warnings: string[];
+      action: "pass" | "retry" | "flag";
     } | null;
   };
   errors: string[];
@@ -248,6 +264,74 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
               {askResponse.plan.reason}
             </p>
           </div>
+
+          {/* Phase 13 Validation & Safety Audit Card */}
+          {askResponse.results.validation && (
+            <div className="p-6 rounded-2xl border border-emerald-500/30 bg-slate-900/40 backdrop-blur space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                  <h3 className="text-sm font-bold text-white">Validation & Guardrail Safety Audit</h3>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${
+                    askResponse.results.validation.action === "pass"
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : askResponse.results.validation.action === "flag"
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      : "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                  }`}>
+                    {(askResponse.results.validation.confidence_score * 100).toFixed(0)}% Confidence ({askResponse.results.validation.action.toUpperCase()})
+                  </span>
+                </div>
+              </div>
+
+              {/* Validation Check Status Matrix */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
+                {askResponse.results.validation.checks.map((chk, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 uppercase truncate">{chk.check_name.replace(/_/g, " ")}</span>
+                      {chk.passed ? (
+                        <span className="text-emerald-400 text-[10px] font-bold">✓ PASS</span>
+                      ) : (
+                        <span className="text-rose-400 text-[10px] font-bold">⚠ WARN</span>
+                      )}
+                    </div>
+                    <div className="text-slate-300 text-[11px] truncate">{chk.message}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Hallucination Alerts */}
+              {askResponse.results.validation.hallucinations_detected.length > 0 && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 space-y-1">
+                  <p className="font-semibold flex items-center gap-1.5 text-rose-400">
+                    <AlertCircle className="h-4 w-4" /> Detected Hallucination Warnings:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                    {askResponse.results.validation.hallucinations_detected.map((h, idx) => (
+                      <li key={idx}>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Contradiction Alerts */}
+              {askResponse.results.validation.contradictions_detected.length > 0 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+                  <p className="font-semibold flex items-center gap-1.5 text-amber-400">
+                    <AlertCircle className="h-4 w-4" /> SQL vs Document Contradictions:
+                  </p>
+                  <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                    {askResponse.results.validation.contradictions_detected.map((c, idx) => (
+                      <li key={idx}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* SQL Output Results */}
           {askResponse.results.sql && askResponse.results.sql.rows && (

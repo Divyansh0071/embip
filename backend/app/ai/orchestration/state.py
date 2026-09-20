@@ -20,6 +20,8 @@ class OrchestrationState(TypedDict, total=False):
     rag_result: Optional[Dict[str, Any]]
     analytics_result: Optional[Dict[str, Any]]
     visualization_result: Optional[Dict[str, Any]]
+    validation_result: Optional[Dict[str, Any]]
+    retry_count: int
     merged_results: Optional[Dict[str, Any]]
     errors: List[str]
     status: str

@@ -17,6 +17,7 @@ ALLOWED_NODES = {
     "rag_node",
     "analytics_node",
     "visualization_node",
+    "validation_node",
     "merge_node",
 }
 
@@ -64,7 +65,7 @@ class OrchestrationRouter:
     def route_after_sql(self, state: OrchestrationState) -> str:
         """
         Determines next node after sql_node completes.
-        Routes to analytics_node if plan requires analytics, else merge_node.
+        Routes to analytics_node if plan requires analytics, else visualization_node or validation_node.
         """
         plan = state.get("plan") or {}
         if plan.get("requires_analytics"):
@@ -73,17 +74,32 @@ class OrchestrationRouter:
         elif plan.get("requires_visualization"):
             logger.info("Routing from sql_node to visualization_node.")
             return "visualization_node"
-        return "merge_node"
+        return "validation_node"
 
     def route_after_analytics(self, state: OrchestrationState) -> str:
         """
         Determines next node after analytics_node completes.
-        Routes to visualization_node if plan requires visualization, else merge_node.
+        Routes to visualization_node if plan requires visualization, else validation_node.
         """
         plan = state.get("plan") or {}
         if plan.get("requires_visualization"):
             logger.info("Routing from analytics_node to visualization_node.")
             return "visualization_node"
+        return "validation_node"
+
+    def route_after_validation(self, state: OrchestrationState) -> str:
+        """
+        Determines next node after validation_node completes.
+        If validation requests retry and retry_count < 2, loops back to planner.
+        Otherwise proceeds to merge_node.
+        """
+        val_res = state.get("validation_result") or {}
+        retry_cnt = state.get("retry_count", 0)
+
+        if val_res.get("action") == "retry" and retry_cnt < 2:
+            logger.warning(f"Validation requested retry (retry_count={retry_cnt}). Routing back to planner.")
+            return "planner"
+
         return "merge_node"
 
 

@@ -10,12 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.analytics import AnalyticsInput, analytics_service
 from app.ai.visualization import visualization_service
+from app.ai.validation import ValidationRequest, validation_service
 from app.ai.rag import rag_service
 from app.ai.sql import SQLQueryRequest, sql_service
 from app.ai.orchestration.planner import planner_agent
 from app.ai.orchestration.state import OrchestrationState
 
 logger = logging.getLogger(__name__)
+
 
 
 
@@ -180,6 +182,62 @@ async def visualization_node(state: OrchestrationState) -> Dict[str, Any]:
         }
 
 
+async def validation_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Executes Phase 13 Validation & Guardrails Agent to audit candidate state.
+    """
+    question = state["question"]
+    plan = state.get("plan")
+    sql_res = state.get("sql_result")
+    rag_res = state.get("rag_result")
+    analytics_res = state.get("analytics_result")
+    viz_res = state.get("visualization_result")
+    retry_count = state.get("retry_count", 0)
+
+    try:
+        req = ValidationRequest(
+            question=question,
+            plan=plan,
+            sql_result=sql_res,
+            rag_result=rag_res,
+            analytics_result=analytics_res,
+            visualization_result=viz_res,
+        )
+        report = await validation_service.validate(req)
+        report_dict = report.model_dump()
+
+        if report.action == "retry" and retry_count < 2:
+            errors = list(state.get("errors") or [])
+            errors.append(f"Validation retry attempt {retry_count + 1}: {', '.join(report.warnings or ['Low confidence'])}")
+            return {
+                "validation_result": report_dict,
+                "retry_count": retry_count + 1,
+                "errors": errors,
+            }
+
+        return {
+            "validation_result": report_dict,
+            "retry_count": retry_count,
+        }
+    except Exception as e:
+        logger.error(f"validation_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"Validation Agent error: {str(e)}")
+        return {
+            "validation_result": {
+                "is_valid": False,
+                "confidence_score": 0.5,
+                "checks": [],
+                "hallucinations_detected": [],
+                "contradictions_detected": [],
+                "warnings": [f"Validation exception: {str(e)}"],
+                "action": "flag",
+            },
+            "retry_count": retry_count,
+            "errors": errors,
+        }
+
+
 async def merge_node(state: OrchestrationState) -> Dict[str, Any]:
     """
     Graph Node: Aggregates structured outputs from all executed capability nodes.
@@ -189,6 +247,7 @@ async def merge_node(state: OrchestrationState) -> Dict[str, Any]:
         "rag": state.get("rag_result"),
         "analytics": state.get("analytics_result"),
         "visualization": state.get("visualization_result"),
+        "validation": state.get("validation_result"),
     }
 
     errors = state.get("errors") or []
