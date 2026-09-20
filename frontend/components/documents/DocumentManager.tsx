@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { UploadZone } from "./UploadZone";
 import { DocumentList, DocumentItem } from "./DocumentList";
+import { RAGSearchTester } from "./RAGSearchTester";
 import { FileText, RefreshCw, Layers } from "lucide-react";
 
 interface DocumentManagerProps {
@@ -105,6 +106,9 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ userRole }) =>
         {/* Upload Zone */}
         <UploadZone onUploadSuccess={fetchDocuments} getAuthToken={getAuthToken} />
       </div>
+
+      {/* Semantic RAG Retrieval Tester */}
+      <RAGSearchTester getAuthToken={getAuthToken} />
 
       {/* Documents Section */}
       <div className="space-y-3">

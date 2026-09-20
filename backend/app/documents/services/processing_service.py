@@ -1,6 +1,7 @@
 """
 Document Processing Orchestrator Service for EMBIP.
-Handles the complete document lifecycle: Validation -> Storage -> Extraction -> Cleaning -> Chunking -> Persistence.
+Handles the complete document lifecycle:
+Validation -> Storage -> Extraction -> Cleaning -> Chunking -> DB Persistence -> Embedding -> Qdrant Upsert.
 Uses lowercase status values ('uploaded', 'processing', 'processed', 'failed').
 """
 
@@ -10,6 +11,8 @@ import uuid
 from typing import Dict, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.embeddings.service import EmbeddingService, embedding_service
+from app.ai.vectorstore.service import VectorStoreService, vectorstore_service
 from app.documents.extractors import get_extractor_for_file_type
 from app.documents.processing.cleaner import TextCleaner
 from app.documents.processing.chunker import TextChunker
@@ -24,15 +27,23 @@ logger = logging.getLogger(__name__)
 
 class DocumentProcessingService:
     """
-    Service managing document ingestion, extraction, text cleaning, chunking, and DB persistence.
+    Service managing document ingestion, extraction, text cleaning, chunking, embedding, vector indexing, and DB persistence.
     """
 
-    def __init__(self, session: AsyncSession, storage_provider: Optional[DocumentStorage] = None):
+    def __init__(
+        self,
+        session: AsyncSession,
+        storage_provider: Optional[DocumentStorage] = None,
+        emb_service: Optional[EmbeddingService] = None,
+        vec_service: Optional[VectorStoreService] = None,
+    ):
         self.session = session
         self.doc_repo = DocumentRepository(session)
         self.chunk_repo = DocumentChunkRepository(session)
         self.storage = storage_provider or LocalDocumentStorage()
         self.chunker = TextChunker(chunk_size=1000, chunk_overlap=200)
+        self.embedding_service = emb_service or embedding_service
+        self.vectorstore_service = vec_service or vectorstore_service
 
     async def process_document_upload(
         self,
@@ -44,9 +55,9 @@ class DocumentProcessingService:
         org_id: Optional[str] = None,
     ) -> Document:
         """
-        Executes end-to-end document ingestion flow.
+        Executes end-to-end document ingestion flow including text extraction, chunking, embedding, and vector indexing.
 
-        Returns processed Document model.
+        Returns Document model instance.
         """
         # 1. Validate file
         sanitized_name, file_type, validated_mime = DocumentValidator.validate_file(
@@ -108,13 +119,26 @@ class DocumentProcessingService:
             if orm_chunks:
                 await self.chunk_repo.bulk_create_chunks(orm_chunks)
 
+                # 8b. Embed chunks and upsert vectors into Qdrant
+                try:
+                    chunk_texts = [c.content for c in orm_chunks]
+                    embeddings = await self.embedding_service.embed_texts(chunk_texts)
+                    await self.vectorstore_service.index_document_chunks(document, orm_chunks, embeddings)
+                except Exception as vec_err:
+                    error_msg = f"Vector indexing failed: {str(vec_err)}"
+                    logger.error(f"Vector Indexing Failed | id='{document.id}' error='{str(vec_err)}'")
+                    document.status = "failed"
+                    document.processing_error = error_msg[:1000]
+                    await self.session.flush()
+                    return document
+
             # 9. Update document status to 'processed'
             document.status = "processed"
             document.processing_error = None
             await self.session.flush()
 
             logger.info(
-                f"Document Ingestion Succeeded | id='{document.id}' workspace='{workspace_id}' "
+                f"Document Ingestion & Vector Indexing Succeeded | id='{document.id}' workspace='{workspace_id}' "
                 f"type='{file_type}' chunks={len(orm_chunks)}"
             )
             return document
@@ -143,6 +167,12 @@ class DocumentProcessingService:
 
         # Delete physical file from storage
         await self.storage.delete(doc.storage_path)
+
+        # Delete vectors from Qdrant
+        try:
+            await self.vectorstore_service.delete_document_vectors(document_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete Qdrant vectors for doc '{document_id}': {str(e)}")
 
         # Cascade delete DB record and chunks
         return await self.doc_repo.delete_by_id_and_workspace(document_id, workspace_id)

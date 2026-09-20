@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 7 — Document Ingestion & Processing Pipeline (COMPLETED)<br/>
+**Current Phase:** Phase 8 — Embeddings, Qdrant & RAG Retrieval (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 7 Complete & Verified | Ready for Phase 8 Approval<br/>
+**Overall Status:** Phase 8 Complete & Verified | Ready for Phase 9 Approval<br/>
 
 ---
 
@@ -16,18 +16,16 @@
 * **Phase 5 (Demo Enterprise Data Generation - NovaMart):** COMPLETED & VERIFIED.
 * **Phase 6 (Centralized LLM Service & AI Foundation):** COMPLETED & VERIFIED.
 * **Phase 7 (Document Ingestion & Processing Pipeline):** COMPLETED & VERIFIED.
-  * SQL DDL migration `004_documents_schema.sql` created adding `documents` and `document_chunks` tables with tenant foreign keys (`org_id`, `workspace_id`), status constraints (`UPLOADED`, `PROCESSING`, `PROCESSED`, `FAILED`), and indexes.
-  * SQLAlchemy ORM models (`Document`, `DocumentChunk`) and repositories (`DocumentRepository`, `DocumentChunkRepository`).
-  * Generic `DocumentStorage` abstraction with `LocalDocumentStorage` (path-traversal protected) and `SupabaseDocumentStorage` adapter hook.
-  * Secure `DocumentValidator` enforcing 25MB size limits, format checks, magic byte headers (`%PDF-`, `PK\x03\x04`), and filename sanitization.
-  * Format-specific extractors for PDF (`pypdf`), DOCX (`python-docx`), TXT, CSV, and XLSX (`openpyxl`), preserving metadata (pages, sheets, rows).
-  * `TextCleaner` for whitespace normalization, Unicode NFC, and control character removal.
-  * `TextChunker` for deterministic sliding window chunking with overlap and metadata retention.
-  * `DocumentProcessingService` orchestrator and FastAPI endpoints (`POST /documents/upload`, `GET /documents`, `GET /documents/{id}`, `DELETE /documents/{id}`).
-  * Frontend `/documents` page featuring `UploadZone`, file badges, status polling, `DocumentList`, and delete actions.
-  * Automated test suite (`backend/tests/test_documents.py`) passing 39/39 backend tests.
-  * Quality validation suite: backend pytest (39/39 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static pages), `git diff --check` (0 issues).
-  * **Vector Embeddings and Qdrant Indexing have NOT been implemented yet and belong to Phase 8.**
+* **Phase 8 (Embeddings, Qdrant & RAG Retrieval):** COMPLETED & VERIFIED.
+  * Extensible `EmbeddingService` abstraction supporting OpenAI embeddings (`text-embedding-3-small`, 1536 dim) with exponential backoff retries and secret sanitization.
+  * Production-ready `VectorStoreService` & `QdrantVectorStore` abstraction supporting Cosine distance vector indexing, payload metadata storage (`workspace_id`, `document_id`, `chunk_id`, `file_name`, `page_number`, `sheet_name`, `content`), and workspace-scoped payload filtering for multi-tenant isolation.
+  * Seamless document ingestion integration: `DocumentProcessingService` automatically vectorises document text chunks and upserts vectors into Qdrant during upload, updating status to `processed` or capturing errors without losing database chunk integrity.
+  * Automatic vector cleanup: `DELETE /api/v1/documents/{id}` automatically purges corresponding document vector points from Qdrant.
+  * Production-ready `RAGRetrievalService` returning structured citations (`RAGChunkCitation`) with score, chunk index, document metadata, page numbers, and sheet names.
+  * FastAPI endpoint `POST /api/v1/rag/search` protected with JWT authentication and workspace isolation.
+  * Interactive `RAGSearchTester.tsx` UI component integrated into `/documents` page for live semantic retrieval verification.
+  * 100% mocked automated test suite (`backend/tests/test_embeddings.py`, `test_vectorstore.py`, `test_rag.py`) passing 52/52 backend tests with 0 external paid API calls.
+  * Quality validation suite: backend pytest (52/52 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -43,7 +41,7 @@
 | **Phase 5** | **Demo Enterprise Data Generation** | **COMPLETED** | NovaMart 3-yr dataset, 100k sales tx, 20k customers, validators, DB seeder, ground-truth eval |
 | **Phase 6** | **Centralized LLM Service & AI Foundation** | **COMPLETED** | LLMProvider, OpenAIProvider, LLMService, Pydantic models, retries, diagnostic endpoint |
 | **Phase 7** | **Document Ingestion Pipeline** | **COMPLETED** | DDL migrations, PDF/DOCX/TXT/CSV/XLSX extractors, cleaner, chunker, storage, FastAPI endpoints |
-| **Phase 8** | Vector Storage & RAG Engine | *PENDING* | Qdrant Cloud collection indexing, semantic search, payload filters |
+| **Phase 8** | **Embeddings, Qdrant & RAG Engine** | **COMPLETED** | OpenAIEmbeddingProvider, QdrantVectorStore, RAGRetrievalService, POST /api/v1/rag/search, RAGSearchTester UI |
 | **Phase 9** | SQL Agent & AST Security Validator | *PENDING* | `sqlglot` AST validator, read-only SQL generator, timeout wrapper |
 | **Phase 10** | Planner & LangGraph Orchestration | *PENDING* | LangGraph `StateGraph`, 7-agent graph state routing |
 | **Phase 11** | Analytics Agent | *PENDING* | Pandas/NumPy computational agent, statistical transformations |
