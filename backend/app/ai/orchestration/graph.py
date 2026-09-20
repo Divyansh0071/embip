@@ -50,13 +50,23 @@ def build_orchestration_graph():
         },
     )
 
-    # 4. Connect Tool Execution Nodes to Response Merge Node
-    workflow.add_edge("sql_node", "merge_node")
+    # 4. Define Conditional Edges from SQL Node (e.g. to analytics_node or merge_node)
+    workflow.add_conditional_edges(
+        "sql_node",
+        orchestration_router.route_after_sql,
+        {
+            "analytics_node": "analytics_node",
+            "visualization_node": "visualization_node",
+            "merge_node": "merge_node",
+        },
+    )
+
+    # 5. Connect Tool Execution Nodes to Response Merge Node
     workflow.add_edge("rag_node", "merge_node")
     workflow.add_edge("analytics_node", "merge_node")
     workflow.add_edge("visualization_node", "merge_node")
 
-    # 5. Define Terminal Edge
+    # 6. Define Terminal Edge
     workflow.add_edge("merge_node", END)
 
     compiled_graph = workflow.compile()

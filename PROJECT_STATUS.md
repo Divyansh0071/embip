@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 10 — Planner Agent & LangGraph Orchestration (COMPLETED)<br/>
+**Current Phase:** Phase 11 — Analytics Agent (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 10 Complete & Verified | Ready for Phase 11 Approval<br/>
+**Overall Status:** Phase 11 Complete & Verified | Ready for Phase 12 Approval<br/>
 
 ---
 
@@ -19,18 +19,15 @@
 * **Phase 8 (Embeddings, Qdrant & RAG Retrieval):** COMPLETED & VERIFIED.
 * **Phase 9 (SQL Agent & AST Security Validator):** COMPLETED & VERIFIED.
 * **Phase 10 (Planner Agent & LangGraph Orchestration):** COMPLETED & VERIFIED.
-  * Dependency updated in `backend/requirements.txt` (`langgraph>=0.1.0,<0.3.0`).
-  * Created modular orchestration engine in `backend/app/ai/orchestration/`:
-    * `state.py`: Strong `OrchestrationState` TypedDict maintaining question, workspace/user context, intent plan, individual agent outputs, and final merged response.
-    * `planner.py`: `PlannerAgent` leveraging `LLMService` structured output for plan decomposition (SQL, RAG, Analytics, Visualization flags and rationale).
-    * `router.py`: Conditional routing functions determining dynamic agent dispatch based on planner decision flags.
-    * `nodes.py`: Async execution nodes for Planner, SQL Agent, RAG Retrieval, Analytics Agent (placeholder), Visualization Agent (placeholder), and Merge Output.
-    * `graph.py`: Complete LangGraph `StateGraph` compiled workflow with parallel routing branch capability.
-    * `service.py`: `OrchestrationService` handling workspace resolution, graph execution, execution timing, error handling, and structured response construction.
-  * FastAPI endpoint `POST /api/v1/ask` with Supabase JWT authentication, workspace validation, and structured error responses.
-  * Interactive UI components (`OrchestrationView.tsx` & `AskOrchestrationContainer.tsx`) integrated into `/ask` page with plan breakdown badge grid, SQL query & tabular data viewer, RAG chunk citations, and analytics/visualization summary tiles.
-  * 100% mocked unit and integration test suite (`backend/tests/test_planner.py`, `test_orchestration_graph.py`, `test_orchestration_api.py`) bringing backend pytest suite to 85/85 passing tests.
-  * Quality validation suite: backend pytest (85/85 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
+* **Phase 11 (Analytics Agent & Deterministic Calculation Engine):** COMPLETED & VERIFIED.
+  * Dedicated backend analytics package created in `backend/app/ai/analytics/` (`exceptions`, `models`, `operations`, `validators`, `statistics`, `registry`, `prompts`, `agent`, `service`).
+  * 20+ controlled mathematical & statistical operations registered in `ANALYTICS_OPERATIONS` covering descriptive stats, business metrics (AOV, gross profit, margin %), comparisons, growth rate, CAGR, ranking (top/bottom N), grouped aggregations, and time-series resampling.
+  * Strict security controls: Zero arbitrary code execution (`eval`/`exec`/shell/subprocess forbidden).
+  * Data safety: Bounds check (`ANALYTICS_MAX_INPUT_ROWS = 10000`), zero-denominator warning handling, numeric type coercion, NaN/Null tracking.
+  * LangGraph Integration: Sequential dependency flow (`Planner` -> `SQL Agent` -> `Analytics Agent` -> `Merge Node`).
+  * Ground-truth verification: Tested against `novamart_ground_truth.json` benchmarks.
+  * Frontend UI: Enhanced `OrchestrationView.tsx` with Analytics Output card (KPI metrics, grouped tables, time-series, executive explanation, warnings).
+  * Test Suite: Full 124/124 backend pytest tests passing, frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -49,7 +46,7 @@
 | **Phase 8** | **Embeddings, Qdrant & RAG Engine** | **COMPLETED** | OpenAIEmbeddingProvider, QdrantVectorStore, RAGRetrievalService, POST /api/v1/rag/search, RAGSearchTester UI |
 | **Phase 9** | **SQL Agent & AST Security Validator** | **COMPLETED** | `sqlglot` AST validator, read-only SQL generator, timeout wrapper, POST /api/v1/sql/query, SQLQueryTester UI |
 | **Phase 10** | **Planner & LangGraph Orchestration** | **COMPLETED** | LangGraph `StateGraph`, 7-agent graph state routing, POST /api/v1/ask, OrchestrationView UI |
-| **Phase 11** | Analytics Agent | *PENDING* | Pandas/NumPy computational agent, statistical transformations |
+| **Phase 11** | **Analytics Agent** | **COMPLETED** | Pandas/NumPy computational agent, statistical transformations, ANALYTICS_OPERATIONS registry |
 | **Phase 12** | Visualization Agent | *PENDING* | Chart decision matrix, Recharts JSON generator |
 | **Phase 13** | Validation & Guardrails Agent | *PENDING* | Factual cross-checking, hallucination detection, guardrails |
 | **Phase 14** | Natural Language Ask Interface | *PENDING* | Prompt interface, live SSE stream visualization, SQL viewer |

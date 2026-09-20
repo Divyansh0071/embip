@@ -54,8 +54,21 @@ interface AskResponse {
       }>;
     } | null;
     analytics?: {
+      operation: string;
       status: string;
-      message: string;
+      metric?: string | null;
+      value?: number | string | null;
+      groups?: Array<{ group: string; value: number | string }> | null;
+      series?: Array<{ period: string; value: number | string }> | null;
+      summary?: {
+        rows_input: number;
+        rows_used: number;
+        missing_values: number;
+        warnings: string[];
+      };
+      explanation?: string | null;
+      error?: string | null;
+      message?: string;
     } | null;
     visualization?: {
       status: string;
@@ -309,14 +322,96 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
             </div>
           )}
 
-          {/* Analytics / Visualization Adapter Notices */}
-          {askResponse.results.analytics?.status === "not_implemented" && (
-            <div className="p-4 rounded-xl border border-purple-500/20 bg-purple-500/5 text-xs text-purple-300">
-              <span className="font-bold">Analytics Engine (Phase 11): </span>
-              {askResponse.results.analytics.message}
+          {/* Analytics Agent Execution Results */}
+          {askResponse.results.analytics && askResponse.results.analytics.status !== "not_implemented" && (
+            <div className="p-6 rounded-2xl border border-purple-500/30 bg-slate-900/40 backdrop-blur space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-2">
+                  <LineChart className="h-4 w-4 text-purple-400" />
+                  <h3 className="text-sm font-bold text-white">Analytics Agent Output</h3>
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold uppercase">
+                    {askResponse.results.analytics.operation}
+                  </span>
+                </div>
+                {askResponse.results.analytics.summary && (
+                  <span className="text-xs font-mono text-slate-400">
+                    Used {askResponse.results.analytics.summary.rows_used} / {askResponse.results.analytics.summary.rows_input} rows
+                  </span>
+                )}
+              </div>
+
+              {/* Scalar Metric Value display */}
+              {askResponse.results.analytics.value !== undefined && askResponse.results.analytics.value !== null && (
+                <div className="p-4 rounded-xl bg-purple-950/30 border border-purple-500/20 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-purple-300 font-medium uppercase tracking-wider block">
+                      {askResponse.results.analytics.metric || askResponse.results.analytics.operation}
+                    </span>
+                    <span className="text-2xl font-black font-mono text-white">
+                      {typeof askResponse.results.analytics.value === "number"
+                        ? askResponse.results.analytics.value.toLocaleString()
+                        : String(askResponse.results.analytics.value)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Grouped Aggregations display */}
+              {askResponse.results.analytics.groups && askResponse.results.analytics.groups.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-400">Grouped Aggregations</span>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {askResponse.results.analytics.groups.map((g, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-between">
+                        <span className="text-[11px] text-slate-400 font-medium truncate">{g.group}</span>
+                        <span className="text-sm font-bold font-mono text-purple-300">
+                          {typeof g.value === "number" ? g.value.toLocaleString() : String(g.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Time-Series display */}
+              {askResponse.results.analytics.series && askResponse.results.analytics.series.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-400">Time-Series Trend</span>
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1 font-mono text-xs">
+                    {askResponse.results.analytics.series.map((pt, idx) => (
+                      <div key={idx} className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between items-center text-[11px]">
+                        <span className="text-slate-400">{pt.period}</span>
+                        <span className="text-purple-300 font-bold">
+                          {typeof pt.value === "number" ? pt.value.toLocaleString() : String(pt.value)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Natural Language Explanation */}
+              {askResponse.results.analytics.explanation && (
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-300 italic">
+                  &quot;{askResponse.results.analytics.explanation}&quot;
+                </div>
+              )}
+
+              {/* Warnings */}
+              {askResponse.results.analytics.summary?.warnings && askResponse.results.analytics.summary.warnings.length > 0 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+                  {askResponse.results.analytics.summary.warnings.map((w, idx) => (
+                    <div key={idx} className="flex items-center space-x-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
+          {/* Visualization Adapter Notice */}
           {askResponse.results.visualization?.status === "not_implemented" && (
             <div className="p-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-xs text-rose-300">
               <span className="font-bold">Visualization Engine (Phase 12): </span>

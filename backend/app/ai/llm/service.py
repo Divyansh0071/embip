@@ -130,6 +130,21 @@ class LLMService:
         logger.error(f"LLM Call Exhausted Retries | provider='{provider.provider_name}' duration={duration_ms}ms")
         raise last_exception or LLMProviderError(error_msg, provider=provider.provider_name)
 
+    async def generate_structured(self, request: LLMRequest, schema_cls: Any, provider_name: Optional[str] = None) -> Any:
+        """
+        Generates LLM completion and parses output using schema_cls.model_validate_json.
+        """
+        response = await self.generate(request, provider_name=provider_name)
+        text_content = response.content.strip()
+        if text_content.startswith("```"):
+            lines = text_content.splitlines()
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].startswith("```"):
+                lines = lines[:-1]
+            text_content = "\n".join(lines).strip()
+        return schema_cls.model_validate_json(text_content)
+
 
 # Global Singleton LLMService Instance
 llm_service = LLMService()

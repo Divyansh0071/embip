@@ -28,8 +28,8 @@ class OrchestrationRouter:
 
     def route(self, state: OrchestrationState) -> List[str]:
         """
-        Determines target nodes to execute based on state['plan'].
-        Returns list of target node strings for LangGraph conditional branching.
+        Determines target initial nodes to execute from planner based on state['plan'].
+        If SQL is required, sql_node is executed first before analytics_node.
         """
         plan = state.get("plan")
         if not plan:
@@ -40,11 +40,13 @@ class OrchestrationRouter:
 
         if plan.get("requires_sql"):
             target_nodes.append("sql_node")
+        elif plan.get("requires_analytics"):
+            target_nodes.append("analytics_node")
+
         if plan.get("requires_rag"):
             target_nodes.append("rag_node")
-        if plan.get("requires_analytics"):
-            target_nodes.append("analytics_node")
-        if plan.get("requires_visualization"):
+
+        if plan.get("requires_visualization") and not (plan.get("requires_sql") or plan.get("requires_analytics")):
             target_nodes.append("visualization_node")
 
         # Validate all computed target nodes against ALLOWED_NODES
@@ -56,8 +58,22 @@ class OrchestrationRouter:
             logger.info("Plan requires no tool execution. Routing directly to merge_node.")
             return ["merge_node"]
 
-        logger.info(f"Router calculated target graph nodes: {target_nodes}")
+        logger.info(f"Router calculated target initial graph nodes: {target_nodes}")
         return target_nodes
+
+    def route_after_sql(self, state: OrchestrationState) -> str:
+        """
+        Determines next node after sql_node completes.
+        Routes to analytics_node if plan requires analytics, else merge_node.
+        """
+        plan = state.get("plan") or {}
+        if plan.get("requires_analytics"):
+            logger.info("Routing from sql_node to analytics_node.")
+            return "analytics_node"
+        elif plan.get("requires_visualization"):
+            logger.info("Routing from sql_node to visualization_node.")
+            return "visualization_node"
+        return "merge_node"
 
 
 # Singleton Instance

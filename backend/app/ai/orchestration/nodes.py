@@ -8,12 +8,14 @@ import logging
 from typing import Any, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.analytics import AnalyticsInput, analytics_service
 from app.ai.rag import rag_service
 from app.ai.sql import SQLQueryRequest, sql_service
 from app.ai.orchestration.planner import planner_agent
 from app.ai.orchestration.state import OrchestrationState
 
 logger = logging.getLogger(__name__)
+
 
 
 async def planner_node(state: OrchestrationState) -> Dict[str, Any]:
@@ -108,15 +110,48 @@ async def rag_node(state: OrchestrationState) -> Dict[str, Any]:
 
 async def analytics_node(state: OrchestrationState) -> Dict[str, Any]:
     """
-    Graph Node: Phase 11 Analytics Agent Adapter Placeholder.
+    Graph Node: Executes Phase 11 Analytics Service to perform deterministic calculations.
     """
-    logger.info("analytics_node called (Phase 11 placeholder adapter).")
-    return {
-        "analytics_result": {
-            "status": "not_implemented",
-            "message": "Analytics Agent statistical engine will be implemented in Phase 11.",
+    question = state["question"]
+    workspace_id = state.get("workspace_id")
+    sql_res = state.get("sql_result") or {}
+
+    rows = sql_res.get("rows")
+    columns = sql_res.get("columns")
+
+    if not rows or not columns:
+        logger.warning("analytics_node called but no valid SQL tabular rows/columns in state.")
+        return {
+            "analytics_result": {
+                "operation": "unknown",
+                "status": "skipped",
+                "summary": {"rows_input": 0, "rows_used": 0, "missing_values": 0, "warnings": ["SQL Agent returned no rows/columns for analytical processing."]},
+                "explanation": "Analytics skipped because no structured SQL data was returned.",
+                "error": "No SQL tabular data available for analysis.",
+            }
         }
-    }
+
+    try:
+        input_data = AnalyticsInput(
+            columns=columns,
+            rows=rows,
+            operation="",  # Service will auto-classify based on question
+        )
+        res = await analytics_service.analyze(
+            input_data=input_data,
+            question=question,
+            sql_request_id=sql_res.get("request_id"),
+            workspace_id=workspace_id,
+        )
+        return {"analytics_result": res.model_dump()}
+    except Exception as e:
+        logger.error(f"analytics_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"Analytics Agent error: {str(e)}")
+        return {
+            "analytics_result": {"status": "error", "error": str(e)},
+            "errors": errors,
+        }
 
 
 async def visualization_node(state: OrchestrationState) -> Dict[str, Any]:
