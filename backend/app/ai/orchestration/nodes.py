@@ -1,0 +1,154 @@
+"""
+LangGraph Async Node Implementations for Multi-Agent Orchestration (Phase 10).
+Executes PlannerAgent, SQLService (Phase 9), RAGRetrievalService (Phase 8),
+Future Phase Adapters (Analytics/Visualization), and Response Merge.
+"""
+
+import logging
+from typing import Any, Dict
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.ai.rag import rag_service
+from app.ai.sql import SQLQueryRequest, sql_service
+from app.ai.orchestration.planner import planner_agent
+from app.ai.orchestration.state import OrchestrationState
+
+logger = logging.getLogger(__name__)
+
+
+async def planner_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Executes PlannerAgent to classify business question intent.
+    """
+    question = state["question"]
+    try:
+        plan = await planner_agent.plan(question)
+        return {"plan": plan.model_dump()}
+    except Exception as e:
+        logger.error(f"planner_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"Planner Agent error: {str(e)}")
+        return {
+            "plan": {
+                "intent": "general",
+                "requires_sql": False,
+                "requires_rag": False,
+                "requires_analytics": False,
+                "requires_visualization": False,
+                "reason": f"Planner failed: {str(e)}",
+            },
+            "errors": errors,
+            "status": "failed",
+        }
+
+
+async def sql_node(state: OrchestrationState, config: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Graph Node: Executes Phase 9 SQLService for database metric retrieval.
+    """
+    question = state["question"]
+    workspace_id = state["workspace_id"]
+    user_id = state.get("user_id")
+
+    # Extract db session from RunnableConfig configurable dict if passed
+    configurable = (config or {}).get("configurable", {})
+    db: AsyncSession = configurable.get("db")
+
+    if not db:
+        logger.error("sql_node Error | No database session provided in graph config.")
+        errors = list(state.get("errors") or [])
+        errors.append("SQL Agent execution skipped: No database session available.")
+        return {
+            "sql_result": {"status": "error", "error": "No database session available."},
+            "errors": errors,
+        }
+
+    try:
+        req = SQLQueryRequest(question=question)
+        resp = await sql_service.execute_question(
+            session=db,
+            request=req,
+            workspace_id=workspace_id,
+            user_id=user_id,
+        )
+        return {"sql_result": resp.model_dump()}
+    except Exception as e:
+        logger.error(f"sql_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"SQL Agent error: {str(e)}")
+        return {
+            "sql_result": {"status": "error", "error": str(e)},
+            "errors": errors,
+        }
+
+
+async def rag_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Executes Phase 8 RAGRetrievalService for document chunk retrieval.
+    """
+    question = state["question"]
+    workspace_id = state["workspace_id"]
+
+    try:
+        rag_resp = await rag_service.retrieve(
+            query=question,
+            workspace_id=workspace_id,
+            top_k=5,
+        )
+        return {"rag_result": rag_resp.model_dump()}
+    except Exception as e:
+        logger.error(f"rag_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"RAG Retrieval error: {str(e)}")
+        return {
+            "rag_result": {"status": "error", "error": str(e)},
+            "errors": errors,
+        }
+
+
+async def analytics_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Phase 11 Analytics Agent Adapter Placeholder.
+    """
+    logger.info("analytics_node called (Phase 11 placeholder adapter).")
+    return {
+        "analytics_result": {
+            "status": "not_implemented",
+            "message": "Analytics Agent statistical engine will be implemented in Phase 11.",
+        }
+    }
+
+
+async def visualization_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Phase 12 Visualization Agent Adapter Placeholder.
+    """
+    logger.info("visualization_node called (Phase 12 placeholder adapter).")
+    return {
+        "visualization_result": {
+            "status": "not_implemented",
+            "message": "Visualization Agent chart engine will be implemented in Phase 12.",
+        }
+    }
+
+
+async def merge_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Aggregates structured outputs from all executed capability nodes.
+    """
+    merged = {
+        "sql": state.get("sql_result"),
+        "rag": state.get("rag_result"),
+        "analytics": state.get("analytics_result"),
+        "visualization": state.get("visualization_result"),
+    }
+
+    errors = state.get("errors") or []
+    status = "completed"
+    if errors:
+        status = "partial" if any(v is not None for v in merged.values()) else "failed"
+
+    return {
+        "merged_results": merged,
+        "status": status,
+    }

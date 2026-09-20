@@ -1,8 +1,8 @@
 # PROJECT_STATUS.md — EMBIP Project Tracking & Status
 
-**Current Phase:** Phase 9 — SQL Agent & SQL Security (COMPLETED)<br/>
+**Current Phase:** Phase 10 — Planner Agent & LangGraph Orchestration (COMPLETED)<br/>
 **Last Updated:** September 2026<br/>
-**Overall Status:** Phase 9 Complete & Verified | Ready for Phase 10 Approval<br/>
+**Overall Status:** Phase 10 Complete & Verified | Ready for Phase 11 Approval<br/>
 
 ---
 
@@ -18,15 +18,19 @@
 * **Phase 7 (Document Ingestion & Processing Pipeline):** COMPLETED & VERIFIED.
 * **Phase 8 (Embeddings, Qdrant & RAG Retrieval):** COMPLETED & VERIFIED.
 * **Phase 9 (SQL Agent & AST Security Validator):** COMPLETED & VERIFIED.
-  * Created dedicated `backend/app/ai/sql/` module with `SchemaContextService`, `SQLValidator`, `SQLSanitizer`, `SQLExecutor`, `SQLAgent`, and `SQLService`.
-  * AST-based security enforcement using `sqlglot` strictly restricting execution to single-statement `SELECT` / `CTE` queries while blocking `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE`, `TRUNCATE`, `GRANT`, `REVOKE`, transaction statements, and dangerous functions (`pg_sleep`, `lo_import`, `dblink_connect`, system setting modifications).
-  * Safe execution engine with statement timeouts (`SQL_STATEMENT_TIMEOUT_SECONDS=10.0`), row limits (`SQL_MAX_ROWS=500`), JSON type serialization (Decimals, dates, datetimes, UUIDs, NULLs), and session-level workspace isolation context (`SET LOCAL app.current_workspace_id`).
-  * Centralized LLM SQL generation with single retry error feedback loop.
-  * Audit logging: Queries recorded in `queries` and `query_executions` database tables.
-  * FastAPI endpoint `POST /api/v1/sql/query` guarded by Supabase JWT auth.
-  * Interactive `SQLQueryTester.tsx` UI component integrated into `/ask` page.
-  * Automated test suite (`backend/tests/test_sql_validator.py`, `test_sql_executor.py`, `test_sql_agent.py`, `test_sql_api.py`) passing 77/77 backend tests.
-  * Quality validation suite: backend pytest (77/77 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
+* **Phase 10 (Planner Agent & LangGraph Orchestration):** COMPLETED & VERIFIED.
+  * Dependency updated in `backend/requirements.txt` (`langgraph>=0.1.0,<0.3.0`).
+  * Created modular orchestration engine in `backend/app/ai/orchestration/`:
+    * `state.py`: Strong `OrchestrationState` TypedDict maintaining question, workspace/user context, intent plan, individual agent outputs, and final merged response.
+    * `planner.py`: `PlannerAgent` leveraging `LLMService` structured output for plan decomposition (SQL, RAG, Analytics, Visualization flags and rationale).
+    * `router.py`: Conditional routing functions determining dynamic agent dispatch based on planner decision flags.
+    * `nodes.py`: Async execution nodes for Planner, SQL Agent, RAG Retrieval, Analytics Agent (placeholder), Visualization Agent (placeholder), and Merge Output.
+    * `graph.py`: Complete LangGraph `StateGraph` compiled workflow with parallel routing branch capability.
+    * `service.py`: `OrchestrationService` handling workspace resolution, graph execution, execution timing, error handling, and structured response construction.
+  * FastAPI endpoint `POST /api/v1/ask` with Supabase JWT authentication, workspace validation, and structured error responses.
+  * Interactive UI components (`OrchestrationView.tsx` & `AskOrchestrationContainer.tsx`) integrated into `/ask` page with plan breakdown badge grid, SQL query & tabular data viewer, RAG chunk citations, and analytics/visualization summary tiles.
+  * 100% mocked unit and integration test suite (`backend/tests/test_planner.py`, `test_orchestration_graph.py`, `test_orchestration_api.py`) bringing backend pytest suite to 85/85 passing tests.
+  * Quality validation suite: backend pytest (85/85 passing), frontend type-check (0 TS errors), frontend lint (0 warnings/errors), frontend build (16/16 static/dynamic routes passing), `git diff --check` (0 issues).
 
 ---
 
@@ -44,7 +48,7 @@
 | **Phase 7** | **Document Ingestion Pipeline** | **COMPLETED** | DDL migrations, PDF/DOCX/TXT/CSV/XLSX extractors, cleaner, chunker, storage, FastAPI endpoints |
 | **Phase 8** | **Embeddings, Qdrant & RAG Engine** | **COMPLETED** | OpenAIEmbeddingProvider, QdrantVectorStore, RAGRetrievalService, POST /api/v1/rag/search, RAGSearchTester UI |
 | **Phase 9** | **SQL Agent & AST Security Validator** | **COMPLETED** | `sqlglot` AST validator, read-only SQL generator, timeout wrapper, POST /api/v1/sql/query, SQLQueryTester UI |
-| **Phase 10** | Planner & LangGraph Orchestration | *PENDING* | LangGraph `StateGraph`, 7-agent graph state routing |
+| **Phase 10** | **Planner & LangGraph Orchestration** | **COMPLETED** | LangGraph `StateGraph`, 7-agent graph state routing, POST /api/v1/ask, OrchestrationView UI |
 | **Phase 11** | Analytics Agent | *PENDING* | Pandas/NumPy computational agent, statistical transformations |
 | **Phase 12** | Visualization Agent | *PENDING* | Chart decision matrix, Recharts JSON generator |
 | **Phase 13** | Validation & Guardrails Agent | *PENDING* | Factual cross-checking, hallucination detection, guardrails |
