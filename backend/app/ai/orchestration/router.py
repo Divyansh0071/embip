@@ -18,6 +18,7 @@ ALLOWED_NODES = {
     "analytics_node",
     "visualization_node",
     "validation_node",
+    "report_node",
     "merge_node",
 }
 
@@ -91,7 +92,7 @@ class OrchestrationRouter:
         """
         Determines next node after validation_node completes.
         If validation requests retry and retry_count < 2, loops back to planner.
-        Otherwise proceeds to merge_node.
+        Otherwise proceeds to report_node.
         """
         val_res = state.get("validation_result") or {}
         retry_cnt = state.get("retry_count", 0)
@@ -100,7 +101,7 @@ class OrchestrationRouter:
             logger.warning(f"Validation requested retry (retry_count={retry_cnt}). Routing back to planner.")
             return "planner"
 
-        return "merge_node"
+        return "report_node"
 
 
 # Singleton Instance

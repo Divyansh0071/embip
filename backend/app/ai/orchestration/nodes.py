@@ -11,8 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.analytics import AnalyticsInput, analytics_service
 from app.ai.visualization import visualization_service
 from app.ai.validation import ValidationRequest, validation_service
+from app.ai.report import report_service
 from app.ai.rag import rag_service
 from app.ai.sql import SQLQueryRequest, sql_service
+
 from app.ai.orchestration.planner import planner_agent
 from app.ai.orchestration.state import OrchestrationState
 
@@ -238,6 +240,37 @@ async def validation_node(state: OrchestrationState) -> Dict[str, Any]:
         }
 
 
+async def report_node(state: OrchestrationState) -> Dict[str, Any]:
+    """
+    Graph Node: Executes Phase 14 Report Generator Agent to synthesize executive business report.
+    """
+    question = state["question"]
+    sql_res = state.get("sql_result")
+    rag_res = state.get("rag_result")
+    analytics_res = state.get("analytics_result")
+    viz_res = state.get("visualization_result")
+    val_res = state.get("validation_result")
+
+    try:
+        report_data = await report_service.generate_report(
+            question=question,
+            sql_result=sql_res,
+            rag_result=rag_res,
+            analytics_result=analytics_res,
+            visualization_result=viz_res,
+            validation_result=val_res,
+        )
+        return {"report_result": report_data.model_dump()}
+    except Exception as e:
+        logger.error(f"report_node Error | error='{str(e)}'")
+        errors = list(state.get("errors") or [])
+        errors.append(f"Report Generator Agent error: {str(e)}")
+        return {
+            "report_result": {"status": "error", "error": str(e)},
+            "errors": errors,
+        }
+
+
 async def merge_node(state: OrchestrationState) -> Dict[str, Any]:
     """
     Graph Node: Aggregates structured outputs from all executed capability nodes.
@@ -248,6 +281,7 @@ async def merge_node(state: OrchestrationState) -> Dict[str, Any]:
         "analytics": state.get("analytics_result"),
         "visualization": state.get("visualization_result"),
         "validation": state.get("validation_result"),
+        "report": state.get("report_result"),
     }
 
     errors = state.get("errors") or []

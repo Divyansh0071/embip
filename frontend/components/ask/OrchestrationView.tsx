@@ -16,6 +16,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { RechartsRenderer, RechartsSpec } from "../visualization/RechartsRenderer";
+import { ReportView, ReportDataProps } from "../reports/ReportView";
+
 
 interface PlannerPlan {
   intent: string;
@@ -94,8 +96,10 @@ interface AskResponse {
       warnings: string[];
       action: "pass" | "retry" | "flag";
     } | null;
+    report?: ReportDataProps | null;
   };
   errors: string[];
+
   execution_time_ms: number;
 }
 
@@ -505,6 +509,11 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
               spec={askResponse.results.visualization.spec}
               explanation={askResponse.results.visualization.explanation}
             />
+          )}
+
+          {/* Report Generator Agent Output */}
+          {askResponse.results.report && askResponse.results.report.report_id && (
+            <ReportView report={askResponse.results.report} getAuthToken={getAuthToken} />
           )}
         </div>
       )}

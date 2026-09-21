@@ -11,6 +11,7 @@ from app.ai.orchestration.nodes import (
     merge_node,
     planner_node,
     rag_node,
+    report_node,
     sql_node,
     validation_node,
     visualization_node,
@@ -34,6 +35,7 @@ def build_orchestration_graph():
     workflow.add_node("analytics_node", analytics_node)
     workflow.add_node("visualization_node", visualization_node)
     workflow.add_node("validation_node", validation_node)
+    workflow.add_node("report_node", report_node)
     workflow.add_node("merge_node", merge_node)
 
     # 2. Define Entry Edge
@@ -49,6 +51,7 @@ def build_orchestration_graph():
             "analytics_node": "analytics_node",
             "visualization_node": "visualization_node",
             "validation_node": "validation_node",
+            "report_node": "report_node",
             "merge_node": "merge_node",
         },
     )
@@ -78,23 +81,26 @@ def build_orchestration_graph():
     workflow.add_edge("rag_node", "validation_node")
     workflow.add_edge("visualization_node", "validation_node")
 
-    # 7. Define Conditional Edge from Validation Node (Retry loop or Merge)
+    # 7. Define Conditional Edge from Validation Node (Retry loop or Report Node)
     workflow.add_conditional_edges(
         "validation_node",
         orchestration_router.route_after_validation,
         {
             "planner": "planner",
+            "report_node": "report_node",
             "merge_node": "merge_node",
         },
     )
 
-    # 8. Define Terminal Edge
+    # 8. Connect Report Node to Merge Node
+    workflow.add_edge("report_node", "merge_node")
+
+    # 9. Define Terminal Edge
     workflow.add_edge("merge_node", END)
 
     compiled_graph = workflow.compile()
     logger.info("LangGraph Orchestration StateGraph successfully compiled.")
     return compiled_graph
-
 
 
 # Compiled Graph Singleton

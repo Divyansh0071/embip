@@ -34,13 +34,14 @@ def test_orchestration_router_retry_loop():
     }
     assert orchestration_router.route_after_validation(state_retry) == "planner"
 
-    # Test merge_node routing when retry threshold reached (retry_count = 2)
+    # Test report_node routing when retry threshold reached (retry_count = 2)
     state_max: OrchestrationState = {
         "question": "Show metrics",
         "validation_result": {"action": "retry"},
         "retry_count": 2,
     }
-    assert orchestration_router.route_after_validation(state_max) == "merge_node"
+    assert orchestration_router.route_after_validation(state_max) == "report_node"
+
 
 
 @pytest.mark.asyncio

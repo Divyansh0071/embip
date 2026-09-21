@@ -21,6 +21,7 @@ class OrchestrationState(TypedDict, total=False):
     analytics_result: Optional[Dict[str, Any]]
     visualization_result: Optional[Dict[str, Any]]
     validation_result: Optional[Dict[str, Any]]
+    report_result: Optional[Dict[str, Any]]
     retry_count: int
     merged_results: Optional[Dict[str, Any]]
     errors: List[str]
