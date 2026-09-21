@@ -5,7 +5,9 @@ Provides multi-agent orchestration endpoint executing LangGraph workflow.
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from app.core.database import get_db
 from app.core.security import get_current_user
@@ -55,4 +57,49 @@ async def ask_intelligence(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during multi-agent orchestration.",
+        )
+
+
+@router.get(
+    "/stream",
+    summary="Stream Natural Language Intelligence Query Events",
+    description="Streams real-time Server-Sent Events (SSE) progress updates as LangGraph agent nodes execute.",
+)
+async def ask_intelligence_stream(
+    question: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    GET /api/v1/ask/stream?question=...
+    Real-time Server-Sent Events (SSE) stream endpoint.
+    """
+    workspace_id = current_user.active_workspace_id
+    if not workspace_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Active workspace context is required to process intelligence requests.",
+        )
+
+    try:
+        generator = await orchestration_service.ask_stream(
+            question=question,
+            workspace_id=workspace_id,
+            user_id=current_user.id,
+            db=db,
+        )
+        return StreamingResponse(
+            generator,
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as e:
+        logger.error(f"Ask Stream API Unexpected Error | user='{current_user.id}' error='{str(e)}'")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during streaming orchestration.",
         )

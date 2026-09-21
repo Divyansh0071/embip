@@ -105,6 +105,24 @@ class OrchestrationService:
                 execution_time_ms=execution_time_ms,
             )
 
+    async def ask_stream(
+        self,
+        question: str,
+        workspace_id: str,
+        user_id: str,
+        db: Optional[AsyncSession] = None,
+    ):
+        """
+        Yields real-time Server-Sent Events (SSE) string chunks during multi-agent graph execution.
+        """
+        from app.ai.orchestration.stream import orchestration_streamer
+        return orchestration_streamer.stream_events(
+            question=question,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            db=db,
+        )
+
 
 # Singleton Instance
 orchestration_service = OrchestrationService()

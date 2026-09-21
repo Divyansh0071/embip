@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { RechartsRenderer, RechartsSpec } from "../visualization/RechartsRenderer";
 import { ReportView, ReportDataProps } from "../reports/ReportView";
+import { SSEStreamProgress } from "./SSEStreamProgress";
+import { MultiTabIntelligenceView } from "./MultiTabIntelligenceView";
+
 
 
 interface PlannerPlan {
@@ -113,6 +116,10 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
   const [isExecuting, setIsExecuting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [activeNode, setActiveNode] = useState<string | null>(null);
+  const [completedNodes, setCompletedNodes] = useState<string[]>([]);
+  const [elapsedMs, setElapsedMs] = useState(0);
+
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim()) return;
@@ -120,16 +127,89 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
     setIsExecuting(true);
     setErrorMessage(null);
     setAskResponse(null);
+    setActiveNode(null);
+    setCompletedNodes([]);
+
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      setElapsedMs(Date.now() - startTime);
+    }, 100);
 
     try {
       const token = await getAuthToken();
       if (!token) {
         setErrorMessage("Authentication session expired. Please log in.");
         setIsExecuting(false);
+        clearInterval(timer);
         return;
       }
 
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      // Attempt SSE streaming endpoint first
+      try {
+        const streamUrl = `${backendUrl}/api/v1/ask/stream?question=${encodeURIComponent(question.trim())}`;
+        const response = await fetch(streamUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const payload = JSON.parse(line.replace("data: ", ""));
+                  if (payload.event === "node_start") {
+                    setActiveNode(payload.node);
+                  } else if (payload.event === "node_complete") {
+                    setCompletedNodes((prev) => (prev.includes(payload.node) ? prev : [...prev, payload.node]));
+                  } else if (payload.event === "stream_completed") {
+                    setAskResponse({
+                      request_id: payload.request_id,
+                      question: payload.question,
+                      status: payload.status,
+                      plan: payload.plan || {
+                        intent: "general",
+                        requires_sql: false,
+                        requires_rag: false,
+                        requires_analytics: false,
+                        requires_visualization: false,
+                        reason: "Completed via streaming execution.",
+                      },
+                      results: payload.results || {},
+                      errors: payload.errors || [],
+                      execution_time_ms: payload.execution_time_ms || 0,
+                    });
+                    setActiveNode(null);
+                  }
+                } catch {
+                  // Ignore JSON parse error on partial chunks
+                }
+              }
+            }
+          }
+          clearInterval(timer);
+          setIsExecuting(false);
+          return;
+        }
+      } catch (streamErr) {
+        console.warn("SSE stream failed, falling back to standard POST /api/v1/ask", streamErr);
+      }
+
+      // Fallback to standard HTTP POST
       const response = await fetch(`${backendUrl}/api/v1/ask`, {
         method: "POST",
         headers: {
@@ -146,12 +226,16 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
 
       const data: AskResponse = await response.json();
       setAskResponse(data);
+      setCompletedNodes(["planner", "sql_node", "rag_node", "analytics_node", "visualization_node", "validation_node", "report_node"]);
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to execute multi-agent orchestration.");
     } finally {
+      clearInterval(timer);
       setIsExecuting(false);
+      setActiveNode(null);
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -209,9 +293,23 @@ export const OrchestrationView: React.FC<OrchestrationViewProps> = ({ getAuthTok
         )}
       </div>
 
+      {/* SSE Real-Time Event Stream Progress Timeline */}
+      {(isExecuting || completedNodes.length > 0) && (
+        <SSEStreamProgress
+          activeNode={activeNode}
+          completedNodes={completedNodes}
+          isStreaming={isExecuting}
+          elapsedMs={elapsedMs}
+        />
+      )}
+
       {askResponse && (
         <div className="space-y-6">
+          {/* Multi-Tab Enterprise Intelligence Viewer */}
+          <MultiTabIntelligenceView askResponse={askResponse} getAuthToken={getAuthToken} />
+
           {/* Planner Card */}
+
           <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur space-y-4">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
