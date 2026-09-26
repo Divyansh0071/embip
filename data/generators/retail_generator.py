@@ -54,7 +54,7 @@ def generate_tenancy():
         "workspace_id": WORKSPACE_ID,
         "user_id": ADMIN_USER_ID,
         "role": "ADMIN",
-        "created_at": "2023-01-01 00:00:00+00",
+        "joined_at": "2023-01-01 00:00:00+00",
     }
 
     return [org], [workspace], [user], [member]

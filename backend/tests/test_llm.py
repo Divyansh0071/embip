@@ -303,7 +303,7 @@ def test_llm_status_endpoint_authenticated():
     payload = {
         "sub": "00000000-0000-4000-a000-000000000003",
         "email": "test@novamart.com",
-        "user_metadata": {"role": "Analyst"},
+        "user_metadata": {"role": "Analyst", "workspace_id": "00000000-0000-4000-a000-000000000002"},
     }
     token = jwt.encode(payload, "secret-key", algorithm="HS256")
 

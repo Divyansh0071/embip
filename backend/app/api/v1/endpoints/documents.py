@@ -5,11 +5,13 @@ Uses reconciled schema with lowercase statuses ('uploaded', 'processing', 'proce
 """
 
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.security import get_current_user, require_role
 from app.documents.processing.validator import DocumentValidationError
 from app.documents.services.processing_service import DocumentProcessingService
@@ -55,7 +57,9 @@ class DocumentDetailResponse(DocumentResponse):
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(lambda: f"{settings.RATE_LIMIT_UPLOAD_PER_MINUTE}/minute")
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     current_user: Dict[str, Any] = Depends(require_role(["ANALYST", "MANAGER", "ADMIN"])),
     db: AsyncSession = Depends(get_db),
@@ -151,6 +155,45 @@ async def get_document_details(
     resp = DocumentDetailResponse.model_validate(doc)
     resp.chunk_count = len(doc.chunks) if doc.chunks else 0
     return resp
+
+
+@router.get("/{document_id}/download")
+@limiter.limit(lambda: f"{settings.RATE_LIMIT_DOWNLOAD_PER_MINUTE}/minute")
+async def download_document(
+    document_id: str,
+    request: Request,
+    current_user: Dict[str, Any] = Depends(require_role(["VIEWER", "ANALYST", "MANAGER", "ADMIN"])),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Download the original document file.
+    Requires VIEWER, ANALYST, MANAGER, or ADMIN role.
+    Enforces tenant isolation by workspace ID.
+    """
+    service = DocumentProcessingService(db)
+    result = await service.retrieve_document_file(
+        document_id=document_id,
+        workspace_id=current_user["workspace_id"],
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found in your workspace.",
+        )
+
+    file_bytes, filename, mime_type = result
+
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "Content-Length": str(len(file_bytes)),
+    }
+
+    return Response(
+        content=file_bytes,
+        media_type=mime_type,
+        headers=headers,
+    )
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_200_OK)

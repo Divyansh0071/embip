@@ -18,6 +18,7 @@ from app.documents.processing.cleaner import TextCleaner
 from app.documents.processing.chunker import TextChunker
 from app.documents.processing.validator import DocumentValidationError, DocumentValidator
 from app.documents.storage.base import DocumentStorage
+from app.documents.storage.factory import get_storage_provider
 from app.documents.storage.local import LocalDocumentStorage
 from app.models.documents import Document, DocumentChunk
 from app.repositories.documents import DocumentChunkRepository, DocumentRepository
@@ -40,7 +41,7 @@ class DocumentProcessingService:
         self.session = session
         self.doc_repo = DocumentRepository(session)
         self.chunk_repo = DocumentChunkRepository(session)
-        self.storage = storage_provider or LocalDocumentStorage()
+        self.storage = storage_provider or get_storage_provider()
         self.chunker = TextChunker(chunk_size=1000, chunk_overlap=200)
         self.embedding_service = emb_service or embedding_service
         self.vectorstore_service = vec_service or vectorstore_service
@@ -159,6 +160,23 @@ class DocumentProcessingService:
 
     async def get_document(self, document_id: str, workspace_id: str) -> Optional[Document]:
         return await self.doc_repo.get_by_id_and_workspace(document_id, workspace_id)
+
+    async def retrieve_document_file(
+        self, document_id: str, workspace_id: str
+    ) -> Optional[tuple[bytes, str, str]]:
+        """
+        Retrieves original file content bytes, filename, and MIME type for a workspace-scoped document.
+        Returns None if document does not exist or does not belong to workspace_id.
+        """
+        doc = await self.get_document(document_id, workspace_id)
+        if not doc:
+            return None
+
+        file_bytes = await self.storage.retrieve(doc.storage_path)
+        filename = doc.original_filename or doc.file_name
+        mime_type = doc.mime_type or "application/octet-stream"
+
+        return file_bytes, filename, mime_type
 
     async def delete_document(self, document_id: str, workspace_id: str) -> bool:
         doc = await self.get_document(document_id, workspace_id)

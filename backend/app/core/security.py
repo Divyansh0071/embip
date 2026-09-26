@@ -12,13 +12,49 @@ security_scheme = HTTPBearer(auto_error=False)
 def decode_supabase_jwt(token: str) -> Dict[str, Any]:
     """
     Decodes and verifies a Supabase / Application JWT token.
-    Enforces signature verification when secret key is configured,
+    Enforces signature verification in production environments when secret key is configured,
     and checks token expiration (exp) and subject claims (sub).
     """
+    env = (os.getenv("ENVIRONMENT") or getattr(settings, "ENVIRONMENT", "development")).lower()
     jwt_secret = os.getenv("SUPABASE_JWT_SECRET") or os.getenv("SECRET_KEY") or getattr(settings, "SECRET_KEY", None)
 
+    is_placeholder = bool(
+        not jwt_secret
+        or "your-" in jwt_secret
+        or jwt_secret == "sk-proj-placeholder"
+    )
+
+    if env == "production":
+        if is_placeholder:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication failed: JWT secret configuration error in production.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        try:
+            payload = jwt.decode(
+                token,
+                key=jwt_secret,
+                algorithms=["HS256", "RS256"],
+                options={"verify_signature": True, "verify_exp": True},
+            )
+            return payload
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        except jwt.InvalidTokenError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid authentication token: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+    # Development / Testing mode fallback
     try:
-        if jwt_secret and jwt_secret != "your-backend-jwt-secret-key-change-in-production":
+        if not is_placeholder:
             payload = jwt.decode(
                 token,
                 key=jwt_secret,
@@ -26,7 +62,6 @@ def decode_supabase_jwt(token: str) -> Dict[str, Any]:
                 options={"verify_signature": True, "verify_exp": True},
             )
         else:
-            # Enforce expiration check and valid structure decoding
             payload = jwt.decode(
                 token,
                 options={"verify_signature": False, "verify_exp": True},
@@ -85,15 +120,33 @@ async def get_current_user(
         or "Analyst"
     )
 
-    org_id = user_metadata.get("org_id") or "default-org-id"
-    workspace_id = user_metadata.get("workspace_id") or "default-workspace-id"
+    org_id = (
+        user_metadata.get("org_id")
+        or app_metadata.get("org_id")
+        or payload.get("org_id")
+        or "default-org-id"
+    )
+
+    # Require explicit workspace_id claim from trusted JWT context
+    workspace_id = (
+        user_metadata.get("workspace_id")
+        or app_metadata.get("workspace_id")
+        or payload.get("workspace_id")
+    )
+
+    if not workspace_id or not str(workspace_id).strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token payload is missing valid workspace_id claim",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return {
         "id": user_id,
         "email": email or f"user_{user_id[:8]}@embip.internal",
         "role": str(role).upper(),
         "organization_id": org_id,
-        "workspace_id": workspace_id,
+        "workspace_id": str(workspace_id).strip(),
     }
 
 

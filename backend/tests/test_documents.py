@@ -28,7 +28,24 @@ from app.documents.processing.validator import DocumentValidationError, Document
 from app.documents.storage.local import LocalDocumentStorage
 from app.main import app
 
+import jwt
+from unittest.mock import AsyncMock, patch
+from app.documents.storage.supabase import SupabaseDocumentStorage
+
 client = TestClient(app)
+
+
+def create_test_jwt(user_id: str, email: str, role: str, workspace_id: str = "ws-test-456") -> str:
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "user_metadata": {
+            "role": role,
+            "org_id": "org-test-123",
+            "workspace_id": workspace_id,
+        },
+    }
+    return jwt.encode(payload, "secret-key", algorithm="HS256")
 
 
 # Helper functions for generating binary sample test files in-memory
@@ -269,3 +286,96 @@ def test_documents_list_unauthenticated_rejected():
     """Verify document list endpoint requires authentication."""
     response = client.get("/api/v1/documents")
     assert response.status_code == 401
+
+
+def test_documents_download_unauthenticated_rejected():
+    """Verify document download without Bearer token returns HTTP 401."""
+    response = client.get("/api/v1/documents/doc-123/download")
+    assert response.status_code == 401
+
+
+@patch("app.documents.services.processing_service.DocumentProcessingService.retrieve_document_file")
+def test_documents_download_same_workspace_success(mock_retrieve):
+    """Verify authenticated user in same workspace can download document with correct headers and content."""
+    mock_retrieve.return_value = (b"%PDF-1.4 sample content", "financial_report.pdf", "application/pdf")
+
+    token = create_test_jwt("usr-analyst", "analyst@company.com", "ANALYST", workspace_id="ws-test-456")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/api/v1/documents/doc-123/download", headers=headers)
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 sample content"
+    assert response.headers["content-type"] == "application/pdf"
+    assert 'attachment; filename="financial_report.pdf"' in response.headers["content-disposition"]
+    assert response.headers["content-length"] == str(len(b"%PDF-1.4 sample content"))
+    mock_retrieve.assert_called_once_with(document_id="doc-123", workspace_id="ws-test-456")
+
+
+@patch("app.documents.services.processing_service.DocumentProcessingService.retrieve_document_file")
+def test_documents_download_cross_workspace_denied(mock_retrieve):
+    """Verify user requesting document from another workspace receives HTTP 404."""
+    mock_retrieve.return_value = None  # Service returns None because document doesn't match workspace
+
+    token = create_test_jwt("usr-analyst", "analyst@company.com", "ANALYST", workspace_id="ws-other-789")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/api/v1/documents/doc-123/download", headers=headers)
+    assert response.status_code == 404
+    assert "not found in your workspace" in response.json()["detail"]
+    mock_retrieve.assert_called_once_with(document_id="doc-123", workspace_id="ws-other-789")
+
+
+@patch("app.documents.services.processing_service.DocumentProcessingService.retrieve_document_file")
+def test_documents_download_nonexistent_404(mock_retrieve):
+    """Verify nonexistent document ID returns HTTP 404."""
+    mock_retrieve.return_value = None
+
+    token = create_test_jwt("usr-viewer", "viewer@company.com", "VIEWER", workspace_id="ws-test-456")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get("/api/v1/documents/nonexistent-id/download", headers=headers)
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_local_storage_retrieve():
+    """Verify LocalDocumentStorage correctly retrieves stored file bytes."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        storage = LocalDocumentStorage(base_dir=tmpdir)
+        content = b"Sample text for retrieval test"
+        path = "ws-123/doc1.txt"
+        saved = await storage.store(content, path)
+        retrieved = await storage.retrieve(saved)
+        assert retrieved == content
+
+
+@pytest.mark.asyncio
+async def test_supabase_private_storage_retrieve_mocked():
+    """Verify SupabaseDocumentStorage.retrieve queries private endpoint with Bearer token header without leaking keys."""
+    secret_key = "sb-secret-service-role-key-999"
+    storage = SupabaseDocumentStorage(
+        supabase_url="https://xyz123.supabase.co",
+        supabase_key=secret_key,
+        bucket_name="documents",
+    )
+
+    fake_response = patch("httpx.AsyncClient.get", new_callable=AsyncMock)
+    with fake_response as mock_get:
+        mock_resp = AsyncMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"Downloaded private bucket content"
+        mock_get.return_value = mock_resp
+
+        bytes_out = await storage.retrieve("ws-123/doc_uuid_test.pdf")
+        assert bytes_out == b"Downloaded private bucket content"
+
+        # Verify call arguments
+        mock_get.assert_called_once()
+        args, kwargs = mock_get.call_args
+        endpoint = args[0]
+        headers = kwargs.get("headers", {})
+
+        # Must hit private object path, NOT public path
+        assert endpoint == "https://xyz123.supabase.co/storage/v1/object/documents/ws-123/doc_uuid_test.pdf"
+        assert "/public/" not in endpoint
+        assert headers.get("Authorization") == f"Bearer {secret_key}"

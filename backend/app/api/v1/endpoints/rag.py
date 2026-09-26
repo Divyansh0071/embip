@@ -4,10 +4,12 @@ Enforces authentication and multi-tenant workspace vector isolation.
 """
 
 from typing import Any, Dict, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.ai.rag.service import RAGRetrievalResponse, rag_service
+from app.core.config import settings
+from app.core.rate_limit import limiter
 from app.core.security import get_current_user
 
 router = APIRouter(prefix="/rag", tags=["rag"])
@@ -22,15 +24,17 @@ class RAGSearchRequest(BaseModel):
 
 
 @router.post("/search", response_model=RAGRetrievalResponse, status_code=status.HTTP_200_OK)
+@limiter.limit(lambda: f"{settings.RATE_LIMIT_SEARCH_PER_MINUTE}/minute")
 async def search_rag_chunks(
-    request: RAGSearchRequest,
+    search_req: RAGSearchRequest,
+    request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
     Executes semantic similarity search over workspace document chunks.
     Derives workspace_id from authenticated session token to enforce tenant isolation.
     """
-    if not request.query or not request.query.strip():
+    if not search_req.query or not search_req.query.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Search query cannot be empty or whitespace-only.",
@@ -38,10 +42,10 @@ async def search_rag_chunks(
 
     try:
         response = await rag_service.retrieve(
-            query=request.query,
+            query=search_req.query,
             workspace_id=current_user["workspace_id"],
-            top_k=request.top_k,
-            document_id_filter=request.document_id,
+            top_k=search_req.top_k,
+            document_id_filter=search_req.document_id,
         )
         return response
     except ValueError as ve:

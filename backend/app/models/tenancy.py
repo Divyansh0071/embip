@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import List, Optional
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-from app.models.base import TimestampMixin, generate_uuid_str
+from app.models.base import TimestampMixin, current_utc_time, generate_uuid_str
 
 
 class Organization(Base, TimestampMixin):
@@ -52,7 +53,7 @@ class User(Base, TimestampMixin):
     )
 
 
-class WorkspaceMember(Base, TimestampMixin):
+class WorkspaceMember(Base):
     __tablename__ = "workspace_members"
     __table_args__ = (
         UniqueConstraint("workspace_id", "user_id", name="unique_workspace_user"),
@@ -68,6 +69,11 @@ class WorkspaceMember(Base, TimestampMixin):
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     role: Mapped[str] = mapped_column(String(50), default="Analyst", nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=current_utc_time,
+        nullable=False,
+    )
 
     workspace: Mapped["Workspace"] = relationship(
         "Workspace", back_populates="members"

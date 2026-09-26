@@ -4,12 +4,14 @@ Provides multi-agent orchestration endpoint executing LangGraph workflow.
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Any, Dict
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
+from app.core.config import settings
 from app.core.database import get_db
+from app.core.rate_limit import limiter
 from app.core.security import get_current_user
 from app.models.tenancy import User
 from app.ai.orchestration.models import AskRequest, AskResponse
@@ -27,16 +29,19 @@ router = APIRouter()
     summary="Ask Natural Language Intelligence Query",
     description="Orchestrates multi-agent execution (Planner, SQL, RAG, Analytics, Visualization) via LangGraph.",
 )
+@limiter.limit(lambda: f"{settings.RATE_LIMIT_ASK_PER_MINUTE}/minute")
 async def ask_intelligence(
-    request: AskRequest,
-    current_user: User = Depends(get_current_user),
+    request_data: AskRequest,
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AskResponse:
     """
     POST /api/v1/ask
     Guarded endpoint executing multi-agent query orchestration.
     """
-    workspace_id = current_user.active_workspace_id
+    user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", "")
+    workspace_id = current_user.get("workspace_id") if isinstance(current_user, dict) else getattr(current_user, "active_workspace_id", None)
     if not workspace_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,15 +50,15 @@ async def ask_intelligence(
 
     try:
         response = await orchestration_service.ask(
-            question=request.question,
+            question=request_data.question,
             workspace_id=workspace_id,
-            user_id=current_user.id,
+            user_id=user_id,
             db=db,
         )
         return response
 
     except Exception as e:
-        logger.error(f"Ask API Unexpected Error | user='{current_user.id}' error='{str(e)}'")
+        logger.error(f"Ask API Unexpected Error | user='{user_id}' error='{str(e)}'")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during multi-agent orchestration.",
@@ -65,16 +70,19 @@ async def ask_intelligence(
     summary="Stream Natural Language Intelligence Query Events",
     description="Streams real-time Server-Sent Events (SSE) progress updates as LangGraph agent nodes execute.",
 )
+@limiter.limit(lambda: f"{settings.RATE_LIMIT_ASK_PER_MINUTE}/minute")
 async def ask_intelligence_stream(
     question: str,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
     GET /api/v1/ask/stream?question=...
     Real-time Server-Sent Events (SSE) stream endpoint.
     """
-    workspace_id = current_user.active_workspace_id
+    user_id = current_user.get("id") if isinstance(current_user, dict) else getattr(current_user, "id", "")
+    workspace_id = current_user.get("workspace_id") if isinstance(current_user, dict) else getattr(current_user, "active_workspace_id", None)
     if not workspace_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,7 +93,7 @@ async def ask_intelligence_stream(
         generator = await orchestration_service.ask_stream(
             question=question,
             workspace_id=workspace_id,
-            user_id=current_user.id,
+            user_id=user_id,
             db=db,
         )
         return StreamingResponse(
@@ -98,7 +106,7 @@ async def ask_intelligence_stream(
             },
         )
     except Exception as e:
-        logger.error(f"Ask Stream API Unexpected Error | user='{current_user.id}' error='{str(e)}'")
+        logger.error(f"Ask Stream API Unexpected Error | user='{user_id}' error='{str(e)}'")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during streaming orchestration.",

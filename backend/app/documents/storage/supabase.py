@@ -49,9 +49,10 @@ class SupabaseDocumentStorage(DocumentStorage):
         if not self.is_configured():
             raise RuntimeError("Supabase Storage credentials are not configured in environment.")
 
-        endpoint = f"{self.supabase_url}/storage/v1/object/public/{self.bucket_name}/{storage_path}"
+        endpoint = f"{self.supabase_url}/storage/v1/object/{self.bucket_name}/{storage_path}"
+        headers = {"Authorization": f"Bearer {self.supabase_key}"}
         async with httpx.AsyncClient() as client:
-            resp = await client.get(endpoint)
+            resp = await client.get(endpoint, headers=headers)
             if resp.status_code != 200:
                 raise FileNotFoundError(f"File not found in Supabase Storage: {storage_path}")
             return resp.content

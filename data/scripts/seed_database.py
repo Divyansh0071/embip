@@ -5,6 +5,7 @@ Supports both PostgreSQL (Supabase) and local SQLite environments.
 """
 
 import asyncio
+from datetime import date, datetime
 import os
 import sys
 import time
@@ -25,21 +26,47 @@ from app.core.database import AsyncSessionLocal, Base, engine
 import app.models  # Ensures all ORM models are registered in Base.metadata
 from data.generators.generate_data import run_data_generation
 
+DATETIME_COLUMNS = {"created_at", "transaction_date", "last_updated", "joined_at"}
+DATE_COLUMNS = {"opened_date", "hired_date", "signup_date", "expense_date"}
+STRING_COLUMNS = {"zip_code", "customer_code", "store_code", "warehouse_code", "sku"}
+
+
+def parse_record_fields(record: dict) -> dict:
+    """
+    Replace NaNs with None and convert string/date/datetime values
+    to native Python objects for SQL binding.
+    """
+    for k, v in record.items():
+        if pd.isna(v):
+            record[k] = None
+        elif k in STRING_COLUMNS and v is not None:
+            record[k] = str(v)
+        elif isinstance(v, str):
+            if k in DATETIME_COLUMNS:
+                record[k] = datetime.fromisoformat(v)
+            elif k in DATE_COLUMNS:
+                record[k] = date.fromisoformat(v[:10]) if len(v) >= 10 else date.fromisoformat(v)
+    return record
+
+
+def get_cleanup_delete_query(table_name: str, workspace_id: str = "00000000-0000-4000-a000-000000000002") -> str:
+    """Generate workspace cleanup DELETE query string based on table schema."""
+    col_name = "id" if table_name == "workspaces" else "workspace_id"
+    return f"DELETE FROM {table_name} WHERE {col_name} = '{workspace_id}'"
 
 
 async def seed_database(data_dir: str = "data/output"):
     """Seed NovaMart synthetic dataset into target database."""
     print("=== Starting Database Seeding Process ===")
-    
+
     # Ensure database schema tables exist
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # Check if CSVs exist, if not run generation
     if not os.path.exists(os.path.join(data_dir, "sales_transactions.csv")):
         print("Data files not found in data/output. Generating dataset first...")
         run_data_generation(data_dir)
-
 
     start_time = time.time()
 
@@ -67,28 +94,21 @@ async def seed_database(data_dir: str = "data/output"):
             text("SELECT COUNT(*) FROM workspaces WHERE id = '00000000-0000-4000-a000-000000000002'")
         )
         existing_ws = res.scalar()
-        
+
         if existing_ws > 0:
             print("Found existing NovaMart Workspace. Cleaning workspace records for re-seeding...")
             # Clean existing workspace data in reverse dependency order
             for table_name, _ in reversed(loading_sequence):
                 if table_name not in ("organizations", "users"):
-                    await session.execute(
-                        text(f"DELETE FROM {table_name} WHERE workspace_id = '00000000-0000-4000-a000-000000000002'")
-                    )
+                    query_str = get_cleanup_delete_query(table_name)
+                    await session.execute(text(query_str))
             await session.commit()
 
         print("\n--- Inserting Tables in Relational Order ---")
         for table_name, csv_filename in loading_sequence:
             filepath = os.path.join(data_dir, csv_filename)
-            df = pd.read_csv(filepath)
-            records = df.to_dict(orient="records")
-            
-            # Replace NaNs with None for SQL NULL
-            for r in records:
-                for k, v in r.items():
-                    if pd.isna(v):
-                        r[k] = None
+            df = pd.read_csv(filepath, dtype={"zip_code": str})
+            records = [parse_record_fields(r) for r in df.to_dict(orient="records")]
 
             print(f" Seeding {table_name:<20} ({len(records):>7,d} rows)...", end="", flush=True)
 
@@ -107,7 +127,7 @@ async def seed_database(data_dir: str = "data/output"):
                 sql_str = f"INSERT INTO {table_name} ({col_names}) VALUES ({val_placeholders})"
                 if "sqlite" not in str(engine.url):
                     sql_str += " ON CONFLICT DO NOTHING"
-                
+
                 await session.execute(text(sql_str), batch)
                 await session.commit()
 
